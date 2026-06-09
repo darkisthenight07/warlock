@@ -3,23 +3,23 @@ import time
 import pandas as pd
 import yaml
 
-with open('config/data.yaml', 'r') as file:
+with open('config.yaml', 'r') as file:
     config = yaml.safe_load(file)
 
 def download():
-    symbols = config['symbols']
-    data_dir = config['raw_dir']
-    exchange = getattr(ccxt, config['exchange'])()
+    symbols = config['data']['symbols']
+    data_dir = config['paths']['raw_dir']
+    exchange = getattr(ccxt, config['data']['exchange'])()
     
     for symbol in symbols:
         print(f'Downloading {symbol}...')
         all_candles = []
-        cursor = exchange.parse8601(f"{config['start_date']}T00:00:00Z")
-        end = exchange.parse8601(f"{config['end_date']}T23:59:59Z")
+        cursor = exchange.parse8601(f"{config['data']['start_date']}T00:00:00Z")
+        end = exchange.parse8601(f"{config['data']['end_date']}T23:59:59Z")
 
         while cursor < end:
             try:
-                batch = exchange.fetch_ohlcv(symbol, config['timeframe'], cursor)
+                batch = exchange.fetch_ohlcv(symbol, config['data']['timeframe'], cursor)
                 if not batch:
                     break
                 all_candles.extend(batch)
