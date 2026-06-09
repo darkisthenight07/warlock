@@ -1,10 +1,7 @@
 import ccxt
 import time
 import pandas as pd
-import yaml
-
-with open('config.yaml', 'r') as file:
-    config = yaml.safe_load(file)
+from src.utils import config
 
 def download():
     symbols = config['data']['symbols']
