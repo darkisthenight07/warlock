@@ -1,4 +1,5 @@
 import pandas as pd
+import numpy as np
 import pyarrow as pa
 import pyarrow.parquet as pq
 from pathlib import Path
@@ -7,6 +8,7 @@ from loguru import logger
 max_fill_candles=2
 volume_zscore_threshold=6.0
 wick_ratio_threshold=10.0
+VOL_ROLLING_DAYS= 30
 
 timeframe_to_freq = {
     "1m":  "1min",
@@ -142,7 +144,20 @@ def handle_missing_candles(
     logger.info(f"Missing candles: {len(df_indexed):,} candles after handling")
     return df_indexed
  
- 
+def normalize_volume(df: pd.DataFrame, rolling_days: int = VOL_ROLLING_DAYS) -> pd.DataFrame:
+    """
+    Z-score normalisation using a trailing rolling window (avoids lookahead).
+    window = rolling_days * 24 candles (for hourly data).
+    Adds column `volume_norm`; raw `volume` is preserved.
+    """
+    window = rolling_days * 24
+    roll = df["volume"].rolling(window, min_periods=1)
+    vol_mean = roll.mean()
+    vol_std  = roll.std().replace(0, np.nan)
+    df["volume_norm"] = (df["volume"] - vol_mean) / vol_std
+    df["volume_norm"] = df["volume_norm"].fillna(0.0)
+    logger.info(f"  Volume normalised (rolling {rolling_days}-day z-score).")
+    return df
  
  
 def save_cleaned_data(
@@ -198,7 +213,7 @@ def clean_ohlcv(
     df = standardise_columns(df)
     df = remove_duplicate_timestamps(df)
     df = handle_missing_candles(df, timeframe, max_fill=max_fill)
-    
+    df = normalize_volume(df)
  
     save_cleaned_data(df, processed_dir, symbol, timeframe)
     generate_cleaning_report(df_raw_snapshot, df, symbol)
