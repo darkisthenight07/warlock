@@ -1,7 +1,10 @@
 import ccxt
 import time
 import pandas as pd
-from src.utils import config
+import sys
+from pathlib import Path
+sys.path.insert(0, str(Path(__file__).parent.parent))
+from utils import config
 
 def download():
     symbols = config['data']['symbols']
@@ -34,6 +37,7 @@ def download():
         data.set_index('timestamp', inplace=True)
         symbol = symbol.split('/')[0]
         file_path = data_dir + '/'+ symbol + "_raw.parquet"
+        Path(data_dir).mkdir(parents=True, exist_ok=True)
         data.to_parquet(file_path)
         print(f'Saved {symbol} data to {file_path}')
 
