@@ -8,6 +8,9 @@ data:
   total_years: 5
   start_date: "2021-06-01"
   end_date: "2026-06-01"
+  max_fill_candles: 2
+  vol_rolling_days: 30
+
 
 #path configs
 paths:

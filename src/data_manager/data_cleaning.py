@@ -4,11 +4,7 @@ import pyarrow as pa
 import pyarrow.parquet as pq
 from pathlib import Path
 from loguru import logger
-
-max_fill_candles=2
-volume_zscore_threshold=6.0
-wick_ratio_threshold=10.0
-VOL_ROLLING_DAYS= 30
+from utils import config
 
 timeframe_to_freq = {
     "1m":  "1min",
@@ -101,7 +97,7 @@ def _compute_gap_lengths(missing_mask: pd.Series) -> pd.Series:
 def handle_missing_candles(
     df: pd.DataFrame,
     timeframe: str,
-    max_fill: int = max_fill_candles,
+    max_fill: int = config['data']['max_fill_candles'],
 ) -> pd.DataFrame:
     freq = timeframe_to_freq.get(timeframe)
     if freq is None:
@@ -144,7 +140,7 @@ def handle_missing_candles(
     logger.info(f"Missing candles: {len(df_indexed):,} candles after handling")
     return df_indexed
  
-def normalize_volume(df: pd.DataFrame, rolling_days: int = VOL_ROLLING_DAYS) -> pd.DataFrame:
+def normalize_volume(df: pd.DataFrame, rolling_days: int = config['data']['vol_rolling_days']) -> pd.DataFrame:
     """
     Z-score normalisation using a trailing rolling window (avoids lookahead).
     window = rolling_days * 24 candles (for hourly data).
@@ -203,7 +199,7 @@ def clean_ohlcv(
     timeframe: str,
     raw_dir: str,
     processed_dir: str,
-    max_fill: int = max_fill_candles,
+    max_fill: int = config['data']['max_fill_candles'],
 ) -> pd.DataFrame:
     logger.info(f" Cleaning pipeline start: {symbol} [{timeframe}] ")
  
