@@ -1,10 +1,8 @@
-import numpy as np
 import pandas as pd
 import pyarrow as pa
-import pyarrow.paraquet as pq
+import pyarrow.parquet as pq
 from pathlib import Path
 from loguru import logger
-from scipy import stats
 
 max_fill_candles=2
 volume_zscore_threshold=6.0
@@ -23,20 +21,21 @@ timeframe_to_freq = {
 
 def load_raw_ohlcv(raw_dir: str, symbol: str, timeframe: str) -> pd.DataFrame:
     
-    symbol_safe=symbol.replace("/","_")
-    filepath=Path(raw_dir)/f"{symbol_safe}_{timeframe}.paraquet"
+    symbol_safe = symbol.split("/")[0]
+    filepath = Path(raw_dir) / f"{symbol_safe}_raw.parquet"
     
     if not filepath.exists():
         
-        raise FileNotFoundError("No data found : {filepath}")
+        raise FileNotFoundError(f"No data found : {filepath}")
 
     df = pd.read_parquet(filepath)
+    df = df.reset_index()
     logger.info(f"Loaded {len(df):,} candles from {filepath}")
     return df
 
 def standardise_columns(df: pd.DataFrame) -> pd.DataFrame:
     required={"timestamp", "open", "high", "low", "close", "volume"}
-    df.columns=[c.lower.strip() for c in df.columns]
+    df.columns=[c.lower().strip() for c in df.columns]
     
     missing=required - set(df.columns)
     if missing:
@@ -46,7 +45,7 @@ def standardise_columns(df: pd.DataFrame) -> pd.DataFrame:
     
     if not pd.api.types.is_datetime64_any_dtype(df["timestamp"]): 
         df["timestamp"] = pd.to_datetime(df["timestamp"], unit="ms", utc=True)
-    df.sort_values("timestamp").reset_index(drop=True)
+    df=df.sort_values("timestamp").reset_index(drop=True)
     return df
 
 
@@ -56,7 +55,7 @@ def remove_duplicate_timestamps(df:pd.DataFrame)->pd.DataFrame:
     n_duplicated = int(duplicated_mask.sum())
     
     if n_duplicated==0:
-        logger.info={f"No duplicates found "}
+        logger.info("No duplicates found")
         return df
     
     logger.warning(f"Duplicates: {n_duplicated} rows share a timestamp — merging")
@@ -68,7 +67,7 @@ def remove_duplicate_timestamps(df:pd.DataFrame)->pd.DataFrame:
             low=("low", "min"),
             close=("close", "last"),
             volume=("volume","sum"),
-        ).sort_index(values="timestamp").reset_index(drop=True)    )
+        ).sort_values(values="timestamp").reset_index(drop=True)    )
     
     
     logger.info(f"Duplicates: merged down to {len(df):,} rows (removed {n_before - len(df)})")
