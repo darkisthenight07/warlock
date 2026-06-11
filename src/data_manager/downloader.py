@@ -4,12 +4,11 @@ import pandas as pd
 import sys
 from logeru import logger
 from pathlib import Path
-sys.path.insert(0, str(Path(__file__).parent.parent))
-from utils import config
+from src.utils import config, root
 
 def download():
     symbols = config['data']['symbols']
-    data_dir = config['paths']['raw_dir']
+    data_dir = root(config['paths']['raw_dir'])
     exchange = getattr(ccxt, config['data']['exchange'])()
     
     for symbol in symbols:
