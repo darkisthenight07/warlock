@@ -109,7 +109,6 @@ def handle_missing_candles(
         start=df["timestamp"].min(),
         end=df["timestamp"].max(),
         freq=freq,
-        tz="UTC",
     )
  
     df_indexed = df.set_index("timestamp").reindex(complete_index)
