@@ -14,7 +14,7 @@ def main():
         "logs/cleaning_{time}.log",
         rotation="1 day",
         retention="7 days",
-        level="Debug",
+        level="DEBUG",
         format="{time:YYYY-MM-DD HH:mm:ss} | {level} | {message}",
     )
 
