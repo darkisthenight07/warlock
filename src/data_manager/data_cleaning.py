@@ -4,7 +4,7 @@ import pyarrow as pa
 import pyarrow.parquet as pq
 from pathlib import Path
 from loguru import logger
-from utils import config
+from src.utils import config
 
 timeframe_to_freq = {
     "1m":  "1min",

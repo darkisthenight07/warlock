@@ -2,7 +2,7 @@ import ccxt
 import time
 import pandas as pd
 import sys
-from logeru import logger
+from loguru import logger
 from pathlib import Path
 from src.utils import config, root
 
@@ -36,7 +36,7 @@ def download():
         data['timestamp'] = pd.to_datetime(data['timestamp'], unit='ms')
         data.set_index('timestamp', inplace=True)
         symbol = symbol.split('/')[0]
-        file_path = data_dir + '/'+ symbol + "_raw.parquet"
+        file_path = data_dir / (symbol + "_raw.parquet")
         Path(data_dir).mkdir(parents=True, exist_ok=True)
         data.to_parquet(file_path)
         logger.info(f'Saved {symbol} data to {file_path}')
