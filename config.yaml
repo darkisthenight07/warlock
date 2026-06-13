@@ -10,6 +10,11 @@ data:
   end_date: "2026-06-01"
   max_fill_candles: 2
   vol_rolling_days: 30
+  #anomaly detection configs
+  anomaly_detection:
+    rolling_window: 30
+    wick_multiplier: 5.0
+    wick_percent: 0.75
 
 
 #path configs
@@ -17,8 +22,4 @@ paths:
   raw_dir:       data/raw
   processed_dir:  data/processed
 
-#anomaly detection configs
-anomaly_detection:
-  rolling_window: 30
-  wick_multiplier: 5.0
-  wick_percent: 0.75
+

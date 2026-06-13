@@ -16,7 +16,6 @@ timeframe_to_freq = {
     "1d":  "1D",
 }
 
-
 def load_raw_ohlcv(raw_dir: str, symbol: str, timeframe: str) -> pd.DataFrame:
     
     symbol_safe = symbol.split("/")[0]
@@ -46,7 +45,6 @@ def standardise_columns(df: pd.DataFrame) -> pd.DataFrame:
     df=df.sort_values("timestamp").reset_index(drop=True)
     return df
 
-
 def remove_duplicate_timestamps(df:pd.DataFrame)->pd.DataFrame:
     n_before=len(df)
     duplicated_mask=df.duplicated(subset=["timestamp"],keep=False)
@@ -65,12 +63,11 @@ def remove_duplicate_timestamps(df:pd.DataFrame)->pd.DataFrame:
             low=("low", "min"),
             close=("close", "last"),
             volume=("volume","sum"),
-        ).sort_values(values="timestamp").reset_index(drop=True)    )
+        ).sort_values(by="timestamp").reset_index(drop=True)    )
     
     
     logger.info(f"Duplicates: merged down to {len(df):,} rows (removed {n_before - len(df)})")
     return df
-
 
 def _compute_gap_lengths(missing_mask: pd.Series) -> pd.Series:
     gaps: dict = {}
@@ -92,7 +89,6 @@ def _compute_gap_lengths(missing_mask: pd.Series) -> pd.Series:
         gaps[gap_start] = gap_len
  
     return pd.Series(gaps)
-
 
 def handle_missing_candles(
     df: pd.DataFrame,
@@ -152,29 +148,11 @@ def normalize_volume(df: pd.DataFrame, rolling_days: int = config['data']['vol_r
     vol_std  = roll.std().replace(0, np.nan)
     df["volume_norm"] = (df["volume"] - vol_mean) / vol_std
     df["volume_norm"] = df["volume_norm"].fillna(0.0)
-    logger.info(f"  Volume normalised (rolling {rolling_days}-day z-score).")
+    logger.success(f"  Volume normalised (rolling {rolling_days}-day z-score).")
     return df
 
 def detect_wick_anomalies(df: pd.DataFrame) -> pd.DataFrame:
-    if not getattr(logger, "wick_anomaly_handler_added", False):
-        log_path = Path(__file__).resolve().parents[2] / "logs" / "wick_anomalies.log"
-        logger.add(
-            str(log_path),
-            rotation="1 day",
-            retention="7 days",
-            level="INFO",
-            format="{time:YYYY-MM-DD HH:mm:ss} | {level} | {message}",
-        )
-        logger.wick_anomaly_handler_added = True
-
-    cfg_path = Path(__file__).resolve().parents[2] / "config.yaml"
-    try:
-        with cfg_path.open("r", encoding="utf-8") as f:
-            cfg = yaml.safe_load(f) or {}
-    except Exception:
-        cfg = {}
-
-    ad_cfg = cfg.get("anomaly_detection", {})
+    ad_cfg = config['data']['anomaly_detection']
     window     = int(ad_cfg.get("rolling_window", 30))
     multiplier = float(ad_cfg.get("wick_multiplier", 5.0))
     percent    = float(ad_cfg.get("wick_percent", 0.75))
@@ -223,8 +201,7 @@ def save_cleaned_data(
     pq.write_table(table, filepath, compression="snappy")
     logger.info(f"Saved → {filepath} ({len(df):,} rows)")
     return filepath
- 
- 
+
 def generate_cleaning_report(
     df_raw: pd.DataFrame,
     df_clean: pd.DataFrame,
@@ -235,6 +212,7 @@ def generate_cleaning_report(
         "raw_candles":      len(df_raw),
         "clean_candles":    len(df_clean),
         "dropped_candles":  len(df_raw) - len(df_clean),
+        "wick_anomalies":   int(df_clean["wick_anomaly_flag"].sum()) if "wick_anomaly_flag" in df_clean.columns else 0,
         "date_start":       str(df_clean["timestamp"].min()),
         "date_end":         str(df_clean["timestamp"].max()),
         "missing_pct":      round(100 * (1 - len(df_clean) / len(df_raw)), 4) if len(df_raw) else 0,
@@ -245,8 +223,7 @@ def generate_cleaning_report(
         logger.info(f"  {k}: {v}")
  
     return report
- 
- 
+  
 def clean_ohlcv(
     symbol: str,
     timeframe: str,
