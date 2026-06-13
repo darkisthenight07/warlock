@@ -154,7 +154,48 @@ def normalize_volume(df: pd.DataFrame, rolling_days: int = config['data']['vol_r
     df["volume_norm"] = df["volume_norm"].fillna(0.0)
     logger.info(f"  Volume normalised (rolling {rolling_days}-day z-score).")
     return df
- 
+
+def detect_wick_anomalies(df: pd.DataFrame) -> pd.DataFrame:
+    logger = logging.getLogger("wick_anomalies")
+    if not logger.handlers:
+        logger.setLevel(logging.INFO)
+        handler = logging.FileHandler("wick_anomalies.log")
+        formatter = logging.Formatter("%(asctime)s - %(message)s")
+        handler.setFormatter(formatter)
+        logger.addHandler(handler)
+
+    cfg_path = Path(__file__).resolve().parents[2] / "config.yaml"
+    try:
+        with cfg_path.open("r", encoding="utf-8") as f:
+            cfg = yaml.safe_load(f) or {}
+    except Exception:
+        cfg = {}
+
+    ad_cfg = cfg.get("anomaly_detection", {})
+    window     = int(ad_cfg.get("rolling_window", 30))
+    multiplier = float(ad_cfg.get("wick_multiplier", 5.0))
+    percent    = float(ad_cfg.get("wick_percent", 0.75))
+
+    price_range = df["high"] - df["low"]
+    rolling_median = price_range.rolling(window=window, min_periods=10).median()
+
+    upper_wick = df["high"] - df[["open", "close"]].max(axis=1)
+    lower_wick = df[["open", "close"]].min(axis=1) - df["low"]
+
+    cond_upper = (upper_wick > multiplier * rolling_median) & (upper_wick > percent * price_range)
+    cond_lower = (lower_wick > multiplier * rolling_median) & (lower_wick > percent * price_range)
+
+    df["wick_anomaly_flag"] = cond_upper | cond_lower
+
+    if "symbol" in df.columns:
+        for sym, grp in df.groupby("symbol"):
+            count = int(grp["wick_anomaly_flag"].sum())
+            logger.info(f"{sym}: {count} anomalous wicks flagged")
+    else:
+        total = int(df["wick_anomaly_flag"].sum())
+        logger.info(f"{total} anomalous wicks flagged (no symbol column)")
+
+    return df
  
 def save_cleaned_data(
     df: pd.DataFrame,
@@ -210,6 +251,7 @@ def clean_ohlcv(
     df = remove_duplicate_timestamps(df)
     df = handle_missing_candles(df, timeframe, max_fill=max_fill)
     df = normalize_volume(df)
+    df = detect_wick_anomalies(df)
  
     save_cleaned_data(df, processed_dir, symbol, timeframe)
     generate_cleaning_report(df_raw_snapshot, df, symbol)
