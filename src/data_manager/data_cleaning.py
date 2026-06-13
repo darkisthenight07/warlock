@@ -156,13 +156,16 @@ def normalize_volume(df: pd.DataFrame, rolling_days: int = config['data']['vol_r
     return df
 
 def detect_wick_anomalies(df: pd.DataFrame) -> pd.DataFrame:
-    logger = logging.getLogger("wick_anomalies")
-    if not logger.handlers:
-        logger.setLevel(logging.INFO)
-        handler = logging.FileHandler("wick_anomalies.log")
-        formatter = logging.Formatter("%(asctime)s - %(message)s")
-        handler.setFormatter(formatter)
-        logger.addHandler(handler)
+    if not getattr(logger, "wick_anomaly_handler_added", False):
+        log_path = Path(__file__).resolve().parents[2] / "logs" / "wick_anomalies.log"
+        logger.add(
+            str(log_path),
+            rotation="1 day",
+            retention="7 days",
+            level="INFO",
+            format="{time:YYYY-MM-DD HH:mm:ss} | {level} | {message}",
+        )
+        logger.wick_anomaly_handler_added = True
 
     cfg_path = Path(__file__).resolve().parents[2] / "config.yaml"
     try:
@@ -189,12 +192,21 @@ def detect_wick_anomalies(df: pd.DataFrame) -> pd.DataFrame:
 
     if "symbol" in df.columns:
         for sym, grp in df.groupby("symbol"):
-            count = int(grp["wick_anomaly_flag"].sum())
-            logger.info(f"{sym}: {count} anomalous wicks flagged")
+            flagged = grp[grp["wick_anomaly_flag"]]
+            count = int(flagged.shape[0])
+            total_flagged += count
+            # collect timestamps as ISO strings (you can change the format)
+            ts_list = flagged["timestamp"].dt.strftime("%Y-%m-%d %H:%M").tolist()
+            ts_str = ", ".join(ts_list) if ts_list else "(none)"
+            logger.info(f"[wick] {sym}: {count:,} anomalous wicks – timestamps: {ts_str}")
     else:
-        total = int(df["wick_anomaly_flag"].sum())
-        logger.info(f"{total} anomalous wicks flagged (no symbol column)")
+        flagged = df[df["wick_anomaly_flag"]]
+        total_flagged = int(flagged.shape[0])
+        ts_list = flagged["timestamp"].dt.strftime("%Y-%m-%d %H:%M").tolist()
+        ts_str = ", ".join(ts_list) if ts_list else "(none)"
+        logger.info(f"[wick] {total_flagged:,} anomalous wicks (no symbol column) – timestamps: {ts_str}")
 
+    logger.success(f"Wick‑anomaly detection completed – {total_flagged:,} wicks flagged")
     return df
  
 def save_cleaned_data(
