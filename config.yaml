@@ -19,6 +19,6 @@ paths:
 
 #anomaly detection configs
 anomaly_detection:
-  rolling_window: 30       # number of candles for the rolling median
-  wick_multiplier: 5.0     # wick must be > multiplier × median size
-  wick_percent: 0.75       # and > this fraction of the total candle range
+  rolling_window: 30
+  wick_multiplier: 5.0
+  wick_percent: 0.75
