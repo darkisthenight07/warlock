@@ -7,24 +7,19 @@ from .base import safe_divide
 def volume_features(df: pd.DataFrame) -> pd.DataFrame:
     out = df.copy()
 
-    # --- Rolling 20‑period mean / std for z‑score ----------------------------
     vol_mean = out["volume"].rolling(20, min_periods=20).mean()
     vol_std = out["volume"].rolling(20, min_periods=20).std()
     out["vol_zscore"] = safe_divide(out["volume"] - vol_mean, vol_std)
 
-    # --- On‑Balance Volume (cumulative) ------------------------------------
     direction = np.where(
         out["close"] > out["close"].shift(), 1,
         np.where(out["close"] < out["close"].shift(), -1, 0)
     )
     out["obv"] = (direction * out["volume"]).cumsum()
 
-    # Normalised OBV (z‑score of the OBV series)
     obv_mean = out["obv"].rolling(20, min_periods=20).mean()
     obv_std = out["obv"].rolling(20, min_periods=20).std()
     out["obv_zscore"] = safe_divide(out["obv"] - obv_mean, obv_std)
-
-    # --- Volume relative to 20‑period average --------------------------------
     out["vol_vs_ma20"] = safe_divide(out["volume"], vol_mean)
 
     return out
