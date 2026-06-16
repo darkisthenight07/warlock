@@ -26,7 +26,6 @@ def plot_features(df: pd.DataFrame, out_dir: str = "graphs") -> None:
         if c not in raw_cols
     ]
 
-    # Global seaborn style (nice but not mandatory)
     sns.set_style("whitegrid")
     sns.set_context("talk", font_scale=0.9)
 
@@ -39,7 +38,6 @@ def plot_features(df: pd.DataFrame, out_dir: str = "graphs") -> None:
         elif col in {"dow_sin", "dow_cos"}:
             plot_df = last_n_days(df, days=21)   # 3 weeks
 
-            # Produce the unit-circle diagnostic exactly once (when we first see `dow_sin`)
             if col == "dow_sin":
                 circle_path = graph_path / "dow_sin_vs_cos_circle.png"
                 plt.figure(figsize=(5, 5))
@@ -61,22 +59,20 @@ def plot_features(df: pd.DataFrame, out_dir: str = "graphs") -> None:
             natr = (df["atr_14"] / df["close"]).replace([np.inf, -np.inf], np.nan) * 100
             plot_df = df.copy()
             plot_df["natr_14"] = natr
-            col = "natr_14"          # rename locally so the rest of the loop uses it
+            col = "natr_14"
 
         elif col == "bb_zscore":
-            plot_df = last_n_days(df, days=30)   # 1 month
+            plot_df = last_n_days(df, days=30)
 
             fig, (ax_price, ax_z) = plt.subplots(
                 nrows=2, ncols=1, sharex=True, figsize=(12, 6),
                 gridspec_kw={"height_ratios": [2, 1]}
             )
-            # Top – price
             ax_price.plot(plot_df["timestamp"], plot_df["close"],
                         color="steelblue", linewidth=0.9)
             ax_price.set_ylabel("BTC Close")
             ax_price.set_title("BTC Price (30-day window)")
 
-            # Bottom – BB Z-score
             ax_z.plot(plot_df["timestamp"], plot_df["bb_zscore"],
                     color="darkorange", linewidth=0.9)
             ax_z.axhline(0, color="black", lw=0.7, ls="--")
@@ -92,7 +88,6 @@ def plot_features(df: pd.DataFrame, out_dir: str = "graphs") -> None:
             continue
 
         elif col == "adx_14":
-            # Compute 14-day rolling mean
             roll_mean = df["adx_14"].rolling(14, min_periods=1).mean()
             plot_df = df.copy()
             plot_df["adx_14_roll14"] = roll_mean
@@ -100,7 +95,6 @@ def plot_features(df: pd.DataFrame, out_dir: str = "graphs") -> None:
         elif col in {"return_1h", "return_4h", "return_24h",
                     "logret_1h", "logret_4h", "logret_24h"}:
             plt.figure(figsize=(8, 5))
-            # Use 100 bins by default; feel free to adjust
             sns.histplot(df[col].dropna(), bins=100, kde=True,
                         color="steelblue", edgecolor="white")
             plt.title(f"Histogram of {col}")
@@ -115,7 +109,6 @@ def plot_features(df: pd.DataFrame, out_dir: str = "graphs") -> None:
         elif col in {"macd", "macd_signal"}:
             if "close" not in df.columns:
                 raise KeyError("Column 'close' required for MACD normalisation.")
-            # Build a temporary DataFrame that contains BOTH normalised series
             macd_norm = (df["macd"] / df["close"]).replace([np.inf, -np.inf], np.nan) * 100
             macd_sig_norm = (df["macd_signal"] / df["close"]).replace([np.inf, -np.inf], np.nan) * 100
             macd_df = pd.DataFrame({
@@ -162,7 +155,7 @@ def plot_features(df: pd.DataFrame, out_dir: str = "graphs") -> None:
             continue
 
         elif col == "obv_zscore":
-            obv_sub = last_n_days(df, days=14)   # 2-week window
+            obv_sub = last_n_days(df, days=14)
             fig, (ax_price, ax_obv) = plt.subplots(
                 nrows=2, ncols=1, sharex=True, figsize=(12, 6),
                 gridspec_kw={"height_ratios": [2, 1]}
@@ -258,7 +251,6 @@ def plot_features(df: pd.DataFrame, out_dir: str = "graphs") -> None:
             pass
 
         elif col == "vol_vs_ma20":
-            # Compute price change over the same window (percentage)
             price_change = df["close"].pct_change().fillna(0)
             plt.figure(figsize=(8, 6))
             sns.scatterplot(x=price_change, y=df["vol_vs_ma20"],
@@ -290,7 +282,7 @@ def plot_features(df: pd.DataFrame, out_dir: str = "graphs") -> None:
         plt.savefig(graph_path / f"{safe_name}.png", dpi=150)
         plt.close()
 
-    print(f"\n✅ All feature graphs written to: {graph_path}\n")
+    print(f"\nAll feature graphs written to: {graph_path}\n")
 
 if __name__ == "__main__":
     generate_features(symbol="BTC/USDT", timeframe="1h")
