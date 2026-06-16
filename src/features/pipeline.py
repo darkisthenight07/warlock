@@ -2,7 +2,7 @@ from __future__ import annotations
 import pandas as pd
 from pathlib import Path
 
-# Import the five feature groups (order matters)
+#Order of the imports matters here
 from .price      import price_features
 from .momentum   import momentum_features
 from .volume     import volume_features
@@ -12,7 +12,6 @@ from .temporal   import temporal_features
 
 def load_cleaned(symbol: str, timeframe: str,
                 processed_dir: str = "data/processed") -> pd.DataFrame:
-    """Read the parquet produced by `src.data_manager.clean_ohlcv`."""
     filename = f"{symbol.replace('/', '_')}_{timeframe}_cleaned.parquet"
     path = Path(processed_dir) / filename
     if not path.is_file():
@@ -23,10 +22,6 @@ def load_cleaned(symbol: str, timeframe: str,
 def split_temporal(df: pd.DataFrame,
                     train_years: float = 4.5,
                     test_months: int = 6) -> tuple[pd.DataFrame, pd.DataFrame]:
-    """
-    Return (train_df, test_df) with a hard 4.5‑year training period and
-    the final ``test_months`` calendar months as the test set.
-    """
     df = df.sort_values("timestamp").reset_index(drop=True)
 
     start = df["timestamp"].min()
@@ -54,26 +49,19 @@ def apply_train_stats(train: pd.DataFrame, test: pd.DataFrame) -> tuple[pd.DataF
     then apply the final training‑statistics to the test slice.
     This guarantees zero leakage.
     """
-    # Helper for a generic “value / rolling_mean” style column:
     def recompute_ratio(raw_col: str, ratio_col: str, window: int):
         train_raw = train[raw_col]
         test_raw  = test[raw_col]
 
-        # Rolling stats computed **only** on training slice
         train_mean = train_raw.rolling(window, min_periods=window).mean()
         train_std  = train_raw.rolling(window, min_periods=window).std()
 
-        # Overwrite train ratio (ensures consistency)
         train[ratio_col] = (train_raw - train_mean) / train_std
 
-        # Apply the *final* training mean/std to the whole test slice
-        # (use the last available training statistic as the scaling factor)
         final_mean = train_mean.iloc[-1]
         final_std  = train_std.iloc[-1]
         test[ratio_col] = (test_raw - final_mean) / final_std
-
-    # Volume z‑score is the only column built as a ratio of raw volume to its rolling stats.
-    # If you add more such columns later, simply call ``recompute_ratio`` for each.
+      
     recompute_ratio("volume", "vol_zscore", window=20)
 
     return train, test
@@ -93,20 +81,16 @@ def generate_features(symbol: str = "BTC/USDT",
     """
     df = load_cleaned(symbol, timeframe, processed_dir)
 
-    # ----- 2️⃣ Apply feature groups ------------------------------------------------
     df = price_features(df)
     df = momentum_features(df)
     df = volume_features(df)
     df = volatility_features(df)
     df = temporal_features(df)
 
-    # ----- 3️⃣ Temporal split ----------------------------------------------------
     train_df, test_df = split_temporal(df, train_years=4.5, test_months=6)
 
-    # ----- 4️⃣ Ensure no leakage in scaling --------------------------------------
     train_df, test_df = apply_train_stats(train_df, test_df)
 
-    # ----- 5️⃣ Persist ------------------------------------------------------------
     out_path = Path(out_dir)
     out_path.mkdir(parents=True, exist_ok=True)
 
@@ -117,7 +101,7 @@ def generate_features(symbol: str = "BTC/USDT",
     test_df .to_parquet(test_path,  compression="snappy")
 
     print(
-        f"\n✅ Feature pipeline completed:\n"
+        f"\nFeature pipeline completed:\n"
         f"   • Train file: {train_path}   ({len(train_df):,} rows)\n"
         f"   • Test  file: {test_path}    ({len(test_df):,} rows)\n"
         f"   • No data from the test period was used for any computation or tuning.\n"
@@ -125,7 +109,6 @@ def generate_features(symbol: str = "BTC/USDT",
 
 
 if __name__ == "__main__":
-    # Small CLI for manual runs
     import argparse
     parser = argparse.ArgumentParser(description="Generate RL‑ready features")
     parser.add_argument("--symbol", default="BTC/USDT")
