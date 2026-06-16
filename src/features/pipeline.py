@@ -44,11 +44,7 @@ def split_temporal(df: pd.DataFrame,
 
 
 def apply_train_stats(train: pd.DataFrame, test: pd.DataFrame) -> tuple[pd.DataFrame, pd.DataFrame]:
-    """
-    Re‑fit any rolling‑ratio columns *only* on the training data,
-    then apply the final training‑statistics to the test slice.
-    This guarantees zero leakage.
-    """
+
     def recompute_ratio(raw_col: str, ratio_col: str, window: int):
         train_raw = train[raw_col]
         test_raw  = test[raw_col]
