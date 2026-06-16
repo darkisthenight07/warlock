@@ -9,7 +9,7 @@ Mandar Bhalerao
 
 Run the following commands sequentially from your repository root (`warlock-main`):
 
-
+**Windows PowerShell:**
 ```powershell
 # 1. Create a virtual environment named 'venv'
 python -m venv venv
