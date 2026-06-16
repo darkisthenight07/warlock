@@ -6,7 +6,6 @@ import numpy as np
 def volatility_features(df: pd.DataFrame) -> pd.DataFrame:
     out = df.copy()
 
-    # ----- ATR (14) ---------------------------------------------------------
     high_low = out["high"] - out["low"]
     high_close = np.abs(out["high"] - out["close"].shift())
     low_close = np.abs(out["low"] - out["close"].shift())
@@ -14,7 +13,6 @@ def volatility_features(df: pd.DataFrame) -> pd.DataFrame:
 
     out["atr_14"] = true_range.ewm(alpha=1 / 14, adjust=False).mean()
 
-    # ----- Realised volatility (rolling std of log returns) -----------------
     if "logret_1h" not in out.columns:
         out["logret_1h"] = np.log1p(out["close"].pct_change())
 
