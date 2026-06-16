@@ -14,7 +14,7 @@ Run the following commands sequentially from your repository root (`warlock-main
 python -m venv venv
 
 # 2. Activate the virtual environment
-.\venv\Scripts\activate
+venv\Scripts\activate
 
 # 3. Install required dependencies
 pip install -r requirements.txt
