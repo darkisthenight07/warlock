@@ -5,7 +5,7 @@ import numpy as np
 try:
     import talib
     _HAS_TALIB = True
-except Exception:   # pragma: no cover
+except Exception:
     _HAS_TALIB = False
 
 
@@ -25,7 +25,6 @@ def momentum_features(df: pd.DataFrame) -> pd.DataFrame:
             out["high"], out["low"], out["close"], timeperiod=14
         )
     else:
-        # ---------- Pure‑pandas RSI ----------
         delta = out["close"].diff()
         up = delta.clip(lower=0)
         down = -delta.clip(upper=0)
@@ -35,7 +34,6 @@ def momentum_features(df: pd.DataFrame) -> pd.DataFrame:
         rs = roll_up / roll_down
         out["rsi_14"] = 100 - (100 / (1 + rs))
 
-        # ---------- Pure‑pandas MACD ----------
         fast = out["close"].ewm(span=12, adjust=False).mean()
         slow = out["close"].ewm(span=26, adjust=False).mean()
         macd = fast - slow
@@ -43,7 +41,6 @@ def momentum_features(df: pd.DataFrame) -> pd.DataFrame:
         out["macd"] = macd
         out["macd_signal"] = signal
 
-        # ---------- Pure‑pandas ADX ----------
         high_low = out["high"] - out["low"]
         high_close = np.abs(out["high"] - out["close"].shift())
         low_close = np.abs(out["low"] - out["close"].shift())
