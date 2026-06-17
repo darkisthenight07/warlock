@@ -4,6 +4,7 @@ import matplotlib.pyplot as plt
 import seaborn as sns
 import pandas as pd
 import numpy as np
+from loguru import logger
 from src.utils import root, config
 
 def last_n_days(df: pd.DataFrame, days: int) -> pd.DataFrame:
