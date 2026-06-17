@@ -1,4 +1,3 @@
-from src.features import generate_features
 import os
 from pathlib import Path
 import matplotlib.pyplot as plt
