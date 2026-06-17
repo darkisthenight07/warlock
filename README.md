@@ -20,10 +20,8 @@ venv\Scripts\activate
 # 3. Install required dependencies
 pip install -r requirements.txt
 
-# 4. Download and clean data
-python runner.py
+# 4. Download, Clean,Generate and plot features
+python main.py
 
-# 5. Generate features and produce graphs
-python data_analysis.py
 
 ```
