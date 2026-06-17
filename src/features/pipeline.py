@@ -2,6 +2,7 @@ from __future__ import annotations
 import pandas as pd
 from pathlib import Path
 from src.utils import root, config
+from loguru import logger
 
 #Order of the imports matters here
 from .price      import price_features
@@ -77,6 +78,15 @@ def generate_and_plot_features(symbol: str = "BTC/USDT",
     4️⃣ Re‑fit any rolling‑ratio columns on the train set only.
     5️⃣ Write ``train.parquet`` and ``test.parquet`` (snappy compressed).
     """
+    log_path = Path(root(config[config["paths"]["logs_dir"]]))
+    log_path.mkdir(exist_ok=True)
+    logger.add(
+        "logs/feature_engineering_{time}.log",
+        rotation="1 day",
+        retention="7 days",
+        level="DEBUG",
+        format="{time:YYYY-MM-DD HH:mm:ss} | {level} | {message}",
+    )
     df = load_cleaned(symbol, timeframe, processed_dir)
 
     df = price_features(df)
@@ -99,7 +109,7 @@ def generate_and_plot_features(symbol: str = "BTC/USDT",
     train_df.to_parquet(train_path, compression="snappy")
     test_df.to_parquet(test_path,  compression="snappy")
 
-    print(
+    logger.success(
         f"\nFeature pipeline completed:\n"
         f"   • Train file: {train_path}   ({len(train_df):,} rows)\n"
         f"   • Test  file: {test_path}    ({len(test_df):,} rows)\n"
