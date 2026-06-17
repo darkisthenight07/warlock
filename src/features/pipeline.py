@@ -1,6 +1,7 @@
 from __future__ import annotations
 import pandas as pd
 from pathlib import Path
+from src.utils import root, config
 
 #Order of the imports matters here
 from .price      import price_features
@@ -8,12 +9,13 @@ from .momentum   import momentum_features
 from .volume     import volume_features
 from .volatility import volatility_features
 from .temporal   import temporal_features
+from .plot_features import plot_features
 
 
 def load_cleaned(symbol: str, timeframe: str,
-                processed_dir: str = "data/processed") -> pd.DataFrame:
+                processed_dir: str = config['paths']['processed_dir']) -> pd.DataFrame:
     filename = f"{symbol.replace('/', '_')}_{timeframe}_cleaned.parquet"
-    path = Path(processed_dir) / filename
+    path = Path(root(processed_dir)) / filename
     if not path.is_file():
         raise FileNotFoundError(f"Cleaned data not found: {path}")
     return pd.read_parquet(path)
@@ -63,10 +65,10 @@ def apply_train_stats(train: pd.DataFrame, test: pd.DataFrame) -> tuple[pd.DataF
     return train, test
 
 
-def generate_features(symbol: str = "BTC/USDT",
+def generate_and_plot_features(symbol: str = "BTC/USDT",
                     timeframe: str = "1h",
-                    processed_dir: str = "data/processed",
-                    out_dir: str = "data/features") -> None:
+                    processed_dir: str = config['paths']['processed_dir'],
+                    out_dir: str = config['paths']['feature_engineered_dir']) -> None:
     """
     Full pipeline:
     1️⃣ Load cleaned parquet.
@@ -82,19 +84,20 @@ def generate_features(symbol: str = "BTC/USDT",
     df = volume_features(df)
     df = volatility_features(df)
     df = temporal_features(df)
+    plot_features(df)
 
     train_df, test_df = split_temporal(df, train_years=4.5, test_months=6)
 
     train_df, test_df = apply_train_stats(train_df, test_df)
 
-    out_path = Path(out_dir)
+    out_path = Path(root(out_dir))
     out_path.mkdir(parents=True, exist_ok=True)
 
     train_path = out_path / "train.parquet"
     test_path  = out_path / "test.parquet"
 
     train_df.to_parquet(train_path, compression="snappy")
-    test_df .to_parquet(test_path,  compression="snappy")
+    test_df.to_parquet(test_path,  compression="snappy")
 
     print(
         f"\nFeature pipeline completed:\n"
@@ -110,4 +113,4 @@ if __name__ == "__main__":
     parser.add_argument("--symbol", default="BTC/USDT")
     parser.add_argument("--timeframe", default="1h")
     args = parser.parse_args()
-    generate_features(symbol=args.symbol, timeframe=args.timeframe)
+    generate_and_plot_features(symbol=args.symbol, timeframe=args.timeframe)

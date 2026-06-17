@@ -21,5 +21,8 @@ data:
 paths:
   raw_dir:       data/raw
   processed_dir:  data/processed
+  feature_engineered_dir: data/features
+  logs_dir:      logs
+  feature_graphs_dir:    graphs/features
 
 
