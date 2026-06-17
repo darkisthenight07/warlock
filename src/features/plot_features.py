@@ -1,4 +1,4 @@
-from src.features import generate_features
+from loguru import logger
 import os
 from pathlib import Path
 import matplotlib.pyplot as plt
@@ -281,4 +281,4 @@ def plot_features(df: pd.DataFrame, out_dir: str = config['paths']['feature_grap
         plt.savefig(graph_path / f"{safe_name}.png", dpi=150)
         plt.close()
 
-    print(f"\nAll feature graphs written to: {graph_path}\n")
+    logger.success(f"\nAll feature graphs written to: {graph_path}\n")

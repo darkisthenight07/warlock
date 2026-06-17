@@ -2,10 +2,11 @@ from pathlib import Path
 from pdb import main
 from loguru import logger
 from src.utils import config, root
-from src.data_manager import download, clean_ohlcv
+from .downloader import download
+from .data_cleaning import clean_ohlcv
 
 def data_pipeline():
-    log_path = Path(root(config[config["paths"]["logs_dir"]]))
+    log_path = Path(root(config["paths"]["logs_dir"]))
     log_path.mkdir(exist_ok=True)
     logger.add(
         "logs/cleaning_{time}.log",
