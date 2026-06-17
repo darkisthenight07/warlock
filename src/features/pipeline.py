@@ -78,7 +78,7 @@ def generate_and_plot_features(symbol: str = "BTC/USDT",
     4️⃣ Re‑fit any rolling‑ratio columns on the train set only.
     5️⃣ Write ``train.parquet`` and ``test.parquet`` (snappy compressed).
     """
-    log_path = Path(root(config[config["paths"]["logs_dir"]]))
+    log_path = Path(root(config["paths"]["logs_dir"]))
     log_path.mkdir(exist_ok=True)
     logger.add(
         "logs/feature_engineering_{time}.log",
