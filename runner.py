@@ -1,9 +1,8 @@
 from pathlib import Path
-from pdb import main
 from loguru import logger
 from src.utils import config, root
-from .downloader import download
-from .data_cleaning import clean_ohlcv
+from src.data_manager.downloader import download
+from src.data_manager.data_cleaning import clean_ohlcv
 
 def data_pipeline():
     log_path = Path(root(config["paths"]["logs_dir"]))

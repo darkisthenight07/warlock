@@ -23,7 +23,7 @@ def load_cleaned(symbol: str, timeframe: str,
 
 
 def split_temporal(df: pd.DataFrame,
-                    train_years: float = 4.5,
+                    train_years: int = 4,
                     test_months: int = 6) -> tuple[pd.DataFrame, pd.DataFrame]:
     df = df.sort_values("timestamp").reset_index(drop=True)
 
@@ -96,7 +96,7 @@ def generate_and_plot_features(symbol: str = "BTC/USDT",
     df = temporal_features(df)
     plot_features(df)
 
-    train_df, test_df = split_temporal(df, train_years=4.5, test_months=6)
+    train_df, test_df = split_temporal(df, train_years=4, test_months=6)
 
     train_df, test_df = apply_train_stats(train_df, test_df)
 
