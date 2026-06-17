@@ -5,7 +5,7 @@ import matplotlib.pyplot as plt
 import seaborn as sns
 import pandas as pd
 import numpy as np
-
+from src.utils import root
 
 def last_n_days(df: pd.DataFrame, days: int) -> pd.DataFrame:
     if "timestamp" not in df.columns:
@@ -16,8 +16,7 @@ def last_n_days(df: pd.DataFrame, days: int) -> pd.DataFrame:
 
 
 def plot_features(df: pd.DataFrame, out_dir: str = "graphs") -> None:
-    repo_root = Path(__file__).resolve().parent
-    graph_path = repo_root / out_dir
+    graph_path = root(out_dir)
     graph_path.mkdir(parents=True, exist_ok=True)
 
     raw_cols = {"timestamp", "open", "high", "low", "close", "volume"}

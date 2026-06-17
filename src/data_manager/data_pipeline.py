@@ -1,9 +1,10 @@
 from pathlib import Path
+from pdb import main
 from loguru import logger
 from src.utils import config, root
 from src.data_manager import download, clean_ohlcv
 
-def main():
+def data_pipeline():
     Path(root("logs")).mkdir(exist_ok=True)
     logger.add(
         "logs/cleaning_{time}.log",
@@ -36,4 +37,4 @@ def main():
             raise
 
 if __name__ == "__main__":
-    main()
+    data_pipeline()
