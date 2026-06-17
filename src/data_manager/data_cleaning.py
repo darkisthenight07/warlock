@@ -168,21 +168,11 @@ def detect_wick_anomalies(df: pd.DataFrame) -> pd.DataFrame:
 
     df["wick_anomaly_flag"] = cond_upper | cond_lower
 
-    if "symbol" in df.columns:
-        for sym, grp in df.groupby("symbol"):
-            flagged = grp[grp["wick_anomaly_flag"]]
-            count = int(flagged.shape[0])
-            total_flagged += count
-            # collect timestamps as ISO strings (you can change the format)
-            ts_list = flagged["timestamp"].dt.strftime("%Y-%m-%d %H:%M").tolist()
-            ts_str = ", ".join(ts_list) if ts_list else "(none)"
-            logger.info(f"[wick] {sym}: {count:,} anomalous wicks – timestamps: {ts_str}")
-    else:
-        flagged = df[df["wick_anomaly_flag"]]
-        total_flagged = int(flagged.shape[0])
-        ts_list = flagged["timestamp"].dt.strftime("%Y-%m-%d %H:%M").tolist()
-        ts_str = ", ".join(ts_list) if ts_list else "(none)"
-        logger.info(f"[wick] {total_flagged:,} anomalous wicks (no symbol column) – timestamps: {ts_str}")
+    flagged = df[df["wick_anomaly_flag"]]
+    total_flagged = int(flagged.shape[0])
+    ts_list = flagged["timestamp"].dt.strftime("%Y-%m-%d %H:%M").tolist()
+    ts_str = ", ".join(ts_list) if ts_list else "(none)"
+    logger.info(f"[wick] {total_flagged:,} anomalous wicks (no symbol column) – timestamps: {ts_str}")
 
     logger.success(f"Wick‑anomaly detection completed – {total_flagged:,} wicks flagged")
     return df
