@@ -9,7 +9,6 @@ data:
   start_date: "2019-01-01"
   end_date: "2024-01-01"
   max_fill_candles: 2
-  vol_rolling_days: 30
   #anomaly detection configs
   anomaly_detection:
     rolling_window: 30
