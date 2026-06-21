@@ -135,21 +135,6 @@ def handle_missing_candles(
     df_indexed = df_indexed.reset_index()
     logger.info(f"Missing candles: {len(df_indexed):,} candles after handling")
     return df_indexed
- 
-def normalize_volume(df: pd.DataFrame, rolling_days: int = config['data']['vol_rolling_days']) -> pd.DataFrame:
-    """
-    Z-score normalisation using a trailing rolling window (avoids lookahead).
-    window = rolling_days * 24 candles (for hourly data).
-    Adds column `volume_norm`; raw `volume` is preserved.
-    """
-    window = rolling_days * 24
-    roll = df["volume"].rolling(window, min_periods=1)
-    vol_mean = roll.mean()
-    vol_std  = roll.std().replace(0, np.nan)
-    df["volume_norm"] = (df["volume"] - vol_mean) / vol_std
-    df["volume_norm"] = df["volume_norm"].fillna(0.0)
-    logger.success(f"  Volume normalised (rolling {rolling_days}-day z-score).")
-    return df
 
 def detect_wick_anomalies(df: pd.DataFrame) -> pd.DataFrame:
     ad_cfg = config['data']['anomaly_detection']
@@ -229,7 +214,6 @@ def clean_ohlcv(
     df = standardise_columns(df)
     df = remove_duplicate_timestamps(df)
     df = handle_missing_candles(df, timeframe, max_fill=max_fill)
-    df = normalize_volume(df)
     df = detect_wick_anomalies(df)
  
     save_cleaned_data(df, processed_dir, symbol, timeframe)
