@@ -6,12 +6,11 @@ from loguru import logger
 
 #Order of the imports matters here
 from .price      import price_features
+from .candle     import candle_features
 from .momentum   import momentum_features
-from .volume     import volume_features
 from .volatility import volatility_features
-from .temporal   import temporal_features
+from .volume     import volume_features
 from .plot_features import plot_features
-
 
 def load_cleaned(symbol: str, timeframe: str,
                 processed_dir: str = config['paths']['processed_dir']) -> pd.DataFrame:
@@ -20,7 +19,6 @@ def load_cleaned(symbol: str, timeframe: str,
     if not path.is_file():
         raise FileNotFoundError(f"Cleaned data not found: {path}")
     return pd.read_parquet(path)
-
 
 def split_temporal(df: pd.DataFrame,
                     train_years: int = 4,
@@ -45,7 +43,6 @@ def split_temporal(df: pd.DataFrame,
 
     return train_df, test_df
 
-
 def apply_train_stats(train: pd.DataFrame, test: pd.DataFrame) -> tuple[pd.DataFrame, pd.DataFrame]:
 
     def recompute_ratio(raw_col: str, ratio_col: str, window: int):
@@ -60,11 +57,13 @@ def apply_train_stats(train: pd.DataFrame, test: pd.DataFrame) -> tuple[pd.DataF
         final_mean = train_mean.iloc[-1]
         final_std  = train_std.iloc[-1]
         test[ratio_col] = (test_raw - final_mean) / final_std
-      
-    recompute_ratio("volume", "vol_zscore", window=20)
+
+    recompute_ratio(
+        "volume", "volume_zscore",
+        window=config["features"]["volume"]["zscore_window"],
+    )
 
     return train, test
-
 
 def generate_and_plot_features(symbol: str = "BTC/USDT",
                     timeframe: str = "1h",
@@ -89,11 +88,11 @@ def generate_and_plot_features(symbol: str = "BTC/USDT",
     )
     df = load_cleaned(symbol, timeframe, processed_dir)
 
-    df = price_features(df)
-    df = momentum_features(df)
-    df = volume_features(df)
-    df = volatility_features(df)
-    df = temporal_features(df)
+    df = price_features(df)       # log_return, log_return_6h, EMA_ratio, distance_from_high/low_24h
+    df = candle_features(df)      # close_location, body_pct, wick_anomaly_flag
+    df = momentum_features(df)    # RSI, ADX, up_streak
+    df = volatility_features(df)  # ATR_pct, volatility_ratio, rolling_sharpe (needs log_return)
+    df = volume_features(df)      # volume_zscore, OBV
     plot_features(df)
 
     train_df, test_df = split_temporal(df, train_years=4, test_months=6)
@@ -115,12 +114,3 @@ def generate_and_plot_features(symbol: str = "BTC/USDT",
         f"   • Test  file: {test_path}    ({len(test_df):,} rows)\n"
         f"   • No data from the test period was used for any computation or tuning.\n"
     )
-
-
-if __name__ == "__main__":
-    import argparse
-    parser = argparse.ArgumentParser(description="Generate RL‑ready features")
-    parser.add_argument("--symbol", default="BTC/USDT")
-    parser.add_argument("--timeframe", default="1h")
-    args = parser.parse_args()
-    generate_and_plot_features(symbol=args.symbol, timeframe=args.timeframe)
