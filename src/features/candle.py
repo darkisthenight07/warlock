@@ -4,8 +4,6 @@ import numpy as np
 from .base import safe_divide
 from src.utils import config
 
-_CFG = config["features"]["candle"]
-
 def candle_features(df: pd.DataFrame) -> pd.DataFrame:
     """
     Single-bar candle geometry features: where the close sits within the

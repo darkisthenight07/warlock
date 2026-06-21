@@ -15,6 +15,27 @@ data:
     wick_multiplier: 5.0
     wick_percent: 0.75
 
+#feature configs
+features:
+  price:
+    log_return_short_period: 1   
+    log_return_long_period: 6
+    ema_window: 20              
+    dist_high_low_window: 24
+
+  momentum:
+    rsi_window: 14
+    adx_window: 14
+
+  volatility:
+    atr_window: 14                 
+    vol_ratio_short_window: 24     
+    vol_ratio_long_window: 72      
+    sharpe_window: 24              
+    periods_per_year: 8760 
+
+  volume:
+    zscore_window: 20             
 
 #path configs
 paths:
