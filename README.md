@@ -24,4 +24,7 @@ pip install -r requirements.txt
 python main.py
 
 
+# To test the environment with 20 random steps
+python test_env.py
+
 ```
