@@ -45,4 +45,11 @@ paths:
   logs_dir:      logs
   feature_graphs_dir:    graphs/features
 
+#env configs
+env:
+  window_len: 48
+  max_trade_step: 0.2
+  transaction_cost_rate: 0.0005
+  max_drawdown: 0.3
+  initial_capital: 10000.0
 
