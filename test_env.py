@@ -2,104 +2,160 @@
 Quick test script to verify GymBitcoinEnv works correctly.
 Run: python test_env.py
 """
+from __future__ import annotations
 import sys
-sys.path.insert(0, ".")
-
-from src.env import GymBitcoinEnv
+import traceback
 import numpy as np
+from loguru import logger
+from src.env import GymBitcoinEnv
+from src.utils import config, root
 
+log_dir = root(config["paths"]["logs_dir"])
+log_dir.mkdir(exist_ok=True, parents=True)
 
-def test_env():
-    print("=" * 60)
-    print("Testing GymBitcoinEnv")
-    print("=" * 60)
+logger.remove()
+logger.add(sys.stdout, level="INFO", format="{time:HH:mm:ss} | {level: <7} | {message}")
+logger.add(
+    str(log_dir / "env_test_{time}.log"),
+    rotation="1 day",
+    retention="7 days",
+    level="DEBUG",
+    format="{time:YYYY-MM-DD HH:mm:ss} | {level} | {message}",
+)
 
-    # Create environment
+def test_env_creation_and_spaces():
     env = GymBitcoinEnv()
-    print(f"✅ Environment created")
-    print(f"   Observation space: {env.observation_space}")
-    print(f"   Action space: {env.action_space}")
-    print(f"   Max steps: {env.max_steps}")
-    print(f"   Features: {env.n_features}")
-    print(f"   Window len: {env.window_len}")
+    logger.info(f"Observation space: {env.observation_space}")
+    logger.info(f"Action space: {env.action_space}")
+    logger.info(f"Max steps: {env.max_steps}, features: {env.n_features}")
+    assert env.action_space.shape == (1,)  # BTC-only for now
+    assert env.action_space.low[0] == 0.0
+    assert env.action_space.high[0] == 1.0
+    env.close()
 
-    # Test reset
-    obs, info = env.reset()
-    print(f"\n✅ Reset successful")
-    print(f"   Obs shape: {obs.shape} (expected: {env.observation_space.shape})")
-    print(f"   Initial info: {info}")
+def test_reset_contract():
+    env = GymBitcoinEnv()
+    obs, info = env.reset(seed=42)
+    logger.info(f"Reset obs shape: {obs.shape} (expected {env.observation_space.shape})")
+    logger.info(f"Reset info: {info}")
+    assert obs.shape == env.observation_space.shape
+    assert "step" in info and "price" in info and "capital" in info
+    assert info["capital"] == env.portfolio.cash  # flat at reset, all cash
+    env.close()
 
-    assert obs.shape == env.observation_space.shape, f"Shape mismatch: {obs.shape} vs {env.observation_space.shape}"
-    assert "step" in info
-    assert "price" in info
+def test_full_allocation_buys_btc():
+    env = GymBitcoinEnv()
+    env.reset(seed=42)
+    obs, reward, terminated, truncated, info = env.step(np.array([1.0], dtype=np.float32))
+    logger.info(
+        f"After action=1.0: weights={info['weights']} cash={info['cash']:.4f} "
+        f"capital={info['capital']:.4f} cost={info['cost']:.4f} reward={reward:.6f}"
+    )
+    # max_trade_step in config caps the move, so weight should be > 0 but
+    # likely not yet at 1.0 after a single step.
+    assert info["weights"][0] > 0.0
+    assert info["cost"] > 0.0  # fee + slippage charged
+    env.close()
 
-    # Test step with random actions
-    print("\n--- Running 20 random steps ---")
+def test_full_episode_random_policy():
+    env = GymBitcoinEnv()
+    obs, info = env.reset(seed=7)
     total_reward = 0.0
-    for i in range(20):
+    n_steps = 0
+    for i in range(50):
         action = env.action_space.sample()
         obs, reward, terminated, truncated, info = env.step(action)
         total_reward += reward
-
-        print(f"  Step {info['step']:4d}: "
-              f"action={action[0]:+6.3f}, "
-              f"pos={info['position']:+6.3f}, "
-              f"pnl={info['pnl']:+10.2f}, "
-              f"cost={info['cost']:8.2f}, "
-              f"cap={info['capital']:10.2f}, "
-              f"dd={info['drawdown']:.3f}, "
-              f"r={reward:+8.2f}")
-
-        # Verify observation shape consistency
-        assert obs.shape == env.observation_space.shape, f"Shape changed at step {i}"
-
+        n_steps += 1
+        assert obs.shape == env.observation_space.shape
         if terminated or truncated:
-            print(f"\n🛑 Episode terminated at step {info['step']}")
-            print(f"   Terminated: {terminated}, Truncated: {truncated}")
-            print(f"   Final capital: {info['capital']:.2f}")
-            print(f"   Max drawdown: {info['drawdown']:.3f}")
+            logger.info(f"Episode terminated early at step {info['step']}")
             break
-
-    print(f"\n✅ Total reward over {i+1} steps: {total_reward:.2f}")
-
-    # Test edge cases
-    print("\n--- Testing edge cases ---")
-
-    # Test action clipping
-    env.reset()
-    obs, r, t, tr, info = env.step(np.array([2.0]))  # Should clip to 1.0
-    assert info["position"] <= 1.0, "Action not clipped"
-    print("✅ Action clipping works")
-
-    # Test max_trade_step limit
-    env.reset()
-    env.step(np.array([1.0]))  # Go long
-    pos_after_1 = env.position
-    env.step(np.array([-1.0]))  # Try to go short (should be limited)
-    pos_after_2 = env.position
-    assert pos_after_2 >= pos_after_1 - env.max_trade_step - 1e-6, "Max trade step not enforced"
-    print(f"✅ Max trade step enforced: {pos_after_1:.3f} -> {pos_after_2:.3f}")
-
-    # Test transaction cost reduces capital
-    env.reset()
-    init_cap = env.capital
-    env.step(np.array([1.0]))
-    assert env.capital < init_cap, "Transaction cost not applied"
-    print(f"✅ Transaction cost applied: {init_cap:.2f} -> {env.capital:.2f}")
-
-    # Test P&L calculation
-    env.reset()
-    env.step(np.array([1.0]))  # Long
-    price_before = env.prices[env.current_step]
-    # Manually step to next price
-    # (just checking that pnl is computed)
-    print("✅ P&L calculation runs without error")
-
+    logger.info(
+        f"Ran {n_steps} steps, total_reward={total_reward:.4f}, "
+        f"final capital={info['capital']:.4f}, final drawdown={info['drawdown']:.4f}"
+    )
+    summary = env.portfolio.metrics()
+    logger.info(f"Portfolio metrics after episode: {summary.to_dict()}")
     env.close()
-    print("\n" + "=" * 60)
-    print("ALL TESTS PASSED ✅")
-    print("=" * 60)
+
+def test_action_clipping():
+    env = GymBitcoinEnv()
+    env.reset(seed=1)
+    # Out-of-range action should clip to [0, 1], not error.
+    obs, r, t, tr, info = env.step(np.array([5.0], dtype=np.float32))
+    assert 0.0 <= info["weights"][0] <= 1.0
+    logger.info(f"Out-of-range action clipped correctly: weights={info['weights']}")
+    env.close()
+
+def test_max_trade_step_rate_limit():
+    env = GymBitcoinEnv()
+    env.reset(seed=3)
+    env.step(np.array([1.0], dtype=np.float32))
+    w1 = env.current_weights[0]
+    _, _, _, _, info = env.step(np.array([0.0], dtype=np.float32))
+    w2 = env.current_weights[0]
+    logger.info(f"Weight after target=1.0: {w1:.4f}, after target=0.0: {w2:.4f}")
+    # max_trade_step (config: 0.2) should prevent an instant full reversal.
+    assert w2 >= w1 - env.position_sizer.max_step_change - 1e-6
+    env.close()
+
+def test_reset_clears_portfolio_state():
+    env = GymBitcoinEnv()
+    env.reset(seed=1)
+    env.step(np.array([1.0], dtype=np.float32))
+    assert env.portfolio.history.n_trades > 0
+    env.reset(seed=1)
+    assert env.portfolio.history.n_trades == 0
+    assert env.portfolio.cash == env.initial_capital
+    logger.info("Reset correctly clears portfolio trade history and cash")
+    env.close()
+
+TESTS = [
+    test_env_creation_and_spaces,
+    test_reset_contract,
+    test_full_allocation_buys_btc,
+    test_full_episode_random_policy,
+    test_action_clipping,
+    test_max_trade_step_rate_limit,
+    test_reset_clears_portfolio_state,
+]
+
+def run_all() -> bool:
+    logger.info("GymBitcoinEnv integration test run starting")
+
+    results: list[tuple[str, bool, str]] = []
+    for test_fn in TESTS:
+        name = test_fn.__name__
+        logger.info(f" RUNNING {name} ")
+        try:
+            test_fn()
+            logger.success(f" PASSED {name} \n")
+            results.append((name, True, ""))
+        except Exception as e:
+            logger.error(f" FAILED {name}: {e} ")
+            logger.debug(traceback.format_exc())
+            results.append((name, False, str(e)))
+
+    n_passed = sum(1 for _, ok, _ in results if ok)
+    n_total = len(results)
+
+    logger.info("SUMMARY")
+    for name, ok, err in results:
+        status = "PASS" if ok else "FAIL"
+        line = f"  [{status}] {name}"
+        if not ok:
+            line += f"  ({err})"
+        logger.info(line)
+
+    logger.info("-" * 70)
+    if n_passed == n_total:
+        logger.success(f"ALL TESTS PASSED ({n_passed}/{n_total})")
+    else:
+        logger.error(f"{n_total - n_passed} TEST(S) FAILED ({n_passed}/{n_total} passed)")
+    return n_passed == n_total
 
 
 if __name__ == "__main__":
-    test_env()
+    success = run_all()
+    sys.exit(0 if success else 1)
