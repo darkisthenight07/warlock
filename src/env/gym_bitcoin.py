@@ -1,4 +1,5 @@
 from __future__ import annotations
+from src.environment.rewards import RewardCalculator
 
 import numpy as np
 import pandas as pd
@@ -105,8 +106,11 @@ class GymBitcoinEnv(gym.Env):
     def reset(self, *, seed: int | None = None, options: dict | None = None):
         super().reset(seed=seed)
 
-        #Start at window_len (first valid observation)
-        self.current_step = self.window_len
+        #random start for generalization
+        self.current_step = self.np_random.integers(
+                    self.window_len, 
+                max(self.window_len + 1, self.max_steps // 2)
+                                )
         self.capital = self.initial_capital
         self.position = 0.0
         self.entry_price = self.prices[self.current_step]
@@ -162,7 +166,12 @@ class GymBitcoinEnv(gym.Env):
         drawdown = (self.peak_capital - self.capital) / self.peak_capital
 
         # 7. Reward (minimal: net PnL)
-        reward = pnl - cost
+        step_return = price_return * self.position
+        reward = self.reward_calc.calculate(
+        step_return=step_return,
+        drawdown=drawdown,
+        position_change=abs(delta),
+                        )
 
         # 8. Termination conditions
         terminated = (
