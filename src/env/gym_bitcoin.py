@@ -55,6 +55,7 @@ class GymBitcoinEnv(gym.Env):
         self.entry_price = 0.0
         self.holding_time = 0
         self.peak_capital = 0.0
+        self.reward_calc = RewardCalculator()
 
         logger.info(
             f"GymBitcoinEnv initialized: "
@@ -116,6 +117,7 @@ class GymBitcoinEnv(gym.Env):
         self.entry_price = self.prices[self.current_step]
         self.holding_time = 0
         self.peak_capital = self.initial_capital
+        self.reward_calc.reset()
 
         obs = self.get_obs()
         info = {
