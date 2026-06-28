@@ -17,6 +17,24 @@ data:
 
 #feature configs
 features:
+  selected_features:
+    - log_return
+    - log_return_6h
+    - RSI
+    - EMA_ratio
+    - ADX
+    - ATR_pct
+    - volatility_ratio
+    - close_location
+    - distance_from_high_24h
+    - distance_from_low_24h
+    - body_pct
+    - volume_zscore
+    - OBV
+    - rolling_sharpe
+    - up_streak
+    - wick_anomaly_flag
+
   price:
     log_return_short_period: 1   
     log_return_long_period: 6
