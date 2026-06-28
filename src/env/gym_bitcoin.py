@@ -1,66 +1,83 @@
 from __future__ import annotations
-from src.environment.rewards import RewardCalculator
 
 import numpy as np
 import pandas as pd
 import gymnasium as gym
 from gymnasium import spaces
-from pathlib import Path
 from loguru import logger
+from src.env.rewards import RewardCalculator
+from src.env.utils import PositionSizer
+from src.portfolio import SpotPortfolio
 from src.utils import config, root
 
-
 class GymBitcoinEnv(gym.Env):
+    """
+    The environment owns market data, the action/observation spaces, and
+    episode bookkeeping (drawdown tracking, termination). All cash,
+    position, fee, and slippage accounting is delegated to
+    (`src/portfolio`), which the env treats as an opaque accounting engine.
+    """
 
     metadata = {"render_modes": []}
 
     def __init__(
         self,
         data_path: str | None = None,
-        window_len: int = 48,
-        max_trade_step: float = 0.2,
-        transaction_cost_rate: float = 0.0005,
-        max_drawdown: float = 0.3,
-        initial_capital: float = 10000.0,
+        window_len: int | None = None,
+        max_trade_step: float | None = None,
+        max_drawdown: float | None = None,
     ):
         super().__init__()
 
-        #Load config if not provided
+        env_cfg = config.get("env", {})
+
+        # Load config if not provided
         if data_path is None:
             data_path = str(root(config["paths"]["feature_engineered_dir"]) / "train.parquet")
 
         self.data_path = data_path
-        self.window_len = window_len
-        self.max_trade_step = max_trade_step
-        self.transaction_cost_rate = transaction_cost_rate
-        self.max_drawdown = max_drawdown
-        self.initial_capital = initial_capital
+        self.window_len = window_len if window_len is not None else env_cfg.get("window_len", 48)
+        self.max_drawdown = max_drawdown if max_drawdown is not None else env_cfg.get("max_drawdown", 0.3)
 
-        #Load data
+        max_trade_step = (
+            max_trade_step if max_trade_step is not None else env_cfg.get("max_trade_step", 0.2)
+        )
+        self.position_sizer = PositionSizer(max_step_change=max_trade_step)
+
+        self.portfolio = SpotPortfolio()
+        self.initial_capital = self.portfolio.cash  # for observation normalization
+        self.n_assets = len(self.portfolio.symbols)
+
         self.load_data()
 
-        #Define spaces
-        obs_dim = self.window_len * self.n_features + 4  # market window + portfolio
+        # Define spaces
+        # obs = market window + portfolio vector
+        # portfolio vector: [cash_weight, *asset_weights, unrealized_pnl_pct, holding_time_norm]
+        # = 1 (cash) + n_assets (weights) + 1 (unrealized pnl) + 1 (holding time)
+        portfolio_vec_dim = 3 + self.n_assets
+        obs_dim = self.window_len * self.n_features + portfolio_vec_dim
         self.observation_space = spaces.Box(
             low=-np.inf, high=np.inf, shape=(obs_dim,), dtype=np.float32
         )
+        # Target allocation per asset, in [0, 1]. Implied cash weight is
+        # 1 - sum(action). The agent's raw output is clipped (not rescaled)
+        # so it can legitimately request "all cash" by outputting zeros.
         self.action_space = spaces.Box(
-            low=-1.0, high=1.0, shape=(1,), dtype=np.float32
+            low=0.0, high=1.0, shape=(self.n_assets,), dtype=np.float32
         )
 
         # Episode state (initialized in reset)
         self.current_step = 0
-        self.capital = 0.0
-        self.position = 0.0
-        self.entry_price = 0.0
+        self.current_weights = [0.0] * self.n_assets
         self.holding_time = 0
-        self.peak_capital = 0.0
+        self.peak_value = 0.0
         self.reward_calc = RewardCalculator()
 
         logger.info(
             f"GymBitcoinEnv initialized: "
-            f"data={self.data_path}, window={window_len}, "
-            f"features={self.n_features}, obs_dim={obs_dim}, max_steps={self.max_steps}"
+            f"data={self.data_path}, window={self.window_len}, "
+            f"features={self.n_features}, obs_dim={obs_dim}, "
+            f"max_steps={self.max_steps}, assets={self.portfolio.symbols}"
         )
 
     def load_data(self) -> None:
@@ -88,98 +105,104 @@ class GymBitcoinEnv(gym.Env):
         start = self.current_step - self.window_len
         market_window = self.features[start:self.current_step].flatten()
 
-        #Portfolio vector: [cash_pct, position, unrealized_pnl_pct, holding_time_norm]
-        #Use percentage return for unrealized PnL
-        if self.entry_price > 0:
-            unrealized_return = (self.prices[self.current_step] - self.entry_price) / self.entry_price
-        else:
-            unrealized_return = 0.0
-        unrealized_pnl = self.position * self.capital * unrealized_return
-        portfolio = np.array([
-            self.capital / self.initial_capital,
-            self.position,
-            unrealized_pnl / self.initial_capital,
-            self.holding_time / 100.0,  # normalize
-        ], dtype=np.float32)
+        prices = [self.prices[self.current_step]]
+        weights = self.portfolio.current_weights(prices)
+        cash_weight = 1.0 - sum(weights)
+        unrealized_pnl_pct = (
+            self.portfolio.unrealized_pnl(prices) / self.initial_capital
+            if self.initial_capital > 0 else 0.0
+        )
 
-        return np.concatenate([market_window, portfolio])
+        portfolio_vec = np.array(
+            [cash_weight, *weights, unrealized_pnl_pct],
+            dtype=np.float32,
+        )
+        portfolio_vec = np.concatenate(
+            [portfolio_vec, np.array([self.holding_time / 100.0], dtype=np.float32)]
+        )
+
+        return np.concatenate([market_window, portfolio_vec])
 
     def reset(self, *, seed: int | None = None, options: dict | None = None):
         super().reset(seed=seed)
 
-        #random start for generalization
+        # random start for generalization
         self.current_step = self.np_random.integers(
-                    self.window_len, 
-                max(self.window_len + 1, self.max_steps // 2)
-                                )
-        self.capital = self.initial_capital
-        self.position = 0.0
-        self.entry_price = self.prices[self.current_step]
+            self.window_len,
+            max(self.window_len + 1, self.max_steps // 2)
+        )
+        self.portfolio.reset()
+        self.current_weights = [0.0] * self.n_assets
         self.holding_time = 0
-        self.peak_capital = self.initial_capital
+        self.peak_value = self.portfolio.cash
         self.reward_calc.reset()
 
         obs = self.get_obs()
+        price = float(self.prices[self.current_step])
         info = {
             "step": self.current_step,
-            "price": self.prices[self.current_step],
-            "position": self.position,
-            "capital": self.capital,
+            "price": price,
+            "weights": list(self.current_weights),
+            "capital": self.portfolio.total_value([price]),
         }
         return obs, info
 
     def step(self, action: np.ndarray):
-        # 1. Clip and smooth action
-        target_pos = float(np.clip(action[0], -1.0, 1.0))
-        delta = np.clip(
-            target_pos - self.position,
-            -self.max_trade_step,
-            self.max_trade_step
-        )
-        new_pos = self.position + delta
+        price_prev = float(self.prices[self.current_step])
 
-        # 2. Transaction cost (on notional traded)
-        trade_notional = abs(delta) * self.capital
-        cost = trade_notional * self.transaction_cost_rate
-        self.capital -= cost
+        # 1. Clip raw action to the valid simplex-ish range, then rate-limit the change in allocation.
+        target_weights = [float(np.clip(a, 0.0, 1.0)) for a in action]
+        new_weights = [
+            self.position_sizer.apply(current, target)
+            for current, target in zip(self.current_weights, target_weights)
+        ]
 
-        # 3. Advance market cursor
+        # Capture portfolio value at the *old* price, before this step's
+        # trade and before advancing the market cursor. This is the
+        # correct denominator for step_return below — valuing pre-trade
+        # holdings at the pre-trade price.
+        value_before = self.portfolio.total_value([price_prev])
+
+        # 2. Advance market cursor to the next candle.
         self.current_step += 1
-        price = self.prices[self.current_step]
-        prev_price = self.prices[self.current_step - 1]
+        price = float(self.prices[self.current_step])
+        prices = [price]
 
-        # 4. P&L from PREVIOUS position (using percentage return)
-        if prev_price > 0:
-            price_return = (price - prev_price) / prev_price
-        else:
-            price_return = 0.0
-        pnl = self.position * self.capital * price_return
-        self.capital += pnl
+        # 3. Execute the rebalance at the new candle's close.
+        weight_delta_before = sum(abs(a - b) for a, b in zip(new_weights, self.current_weights))
+        trades = self.portfolio.step(
+            target_weights=new_weights,
+            prices=prices,
+            step=self.current_step,
+            timestamp=self.timestamps[self.current_step],
+        )
+        self.current_weights = self.portfolio.current_weights(prices)
 
-        # 5. Update portfolio state
-        self.holding_time = 0 if delta != 0 else self.holding_time + 1
+        total_value = self.portfolio.total_value(prices)
+        cost = sum(t.fee + t.slippage_cost for t in trades)
 
-        if delta != 0:
-            self.entry_price = price
-        self.position = new_pos
+        # 4. Step return, for the reward calculator
+        step_return = (total_value - value_before) / value_before if value_before > 0 else 0.0
+
+        # 5. Holding time bookkeeping
+        self.holding_time = 0 if weight_delta_before > 1e-9 else self.holding_time + 1
 
         # 6. Drawdown tracking
-        self.peak_capital = max(self.peak_capital, self.capital)
-        drawdown = (self.peak_capital - self.capital) / self.peak_capital
+        self.peak_value = max(self.peak_value, total_value)
+        drawdown = (self.peak_value - total_value) / self.peak_value if self.peak_value > 0 else 0.0
 
-        # 7. Reward (minimal: net PnL)
-        step_return = price_return * self.position
+        # 7. Reward
         reward = self.reward_calc.calculate(
-        step_return=step_return,
-        drawdown=drawdown,
-        position_change=abs(delta),
-                        )
+            step_return=step_return,
+            drawdown=drawdown,
+            position_change=weight_delta_before,
+        )
 
         # 8. Termination conditions
         terminated = (
             self.current_step >= self.max_steps
             or drawdown >= self.max_drawdown
-            or self.capital <= 0
+            or total_value <= 0
         )
         truncated = False
 
@@ -188,12 +211,12 @@ class GymBitcoinEnv(gym.Env):
         info = {
             "step": self.current_step,
             "price": price,
-            "position": self.position,
-            "pnl": pnl,
+            "weights": list(self.current_weights),
+            "cash": self.portfolio.cash,
             "cost": cost,
-            "capital": self.capital,
+            "capital": total_value,
             "drawdown": drawdown,
-            "trade_notional": trade_notional,
+            "n_trades_this_step": len(trades),
         }
 
         return obs, float(reward), terminated, truncated, info
