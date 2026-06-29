@@ -31,6 +31,26 @@ def volatility_features(df: pd.DataFrame) -> pd.DataFrame:
     realvol_short = out["log_return"].rolling(short_w, min_periods=short_w).std()
     realvol_long = out["log_return"].rolling(long_w, min_periods=long_w).std()
     out["volatility_ratio"] = safe_divide(realvol_short, realvol_long)
+    
+    bb_window = 20
+
+    rolling_mean = out["close"].rolling(
+    bb_window,
+    min_periods=bb_window,
+    ).mean()
+
+    rolling_std = out["close"].rolling(
+    bb_window,
+    min_periods=bb_window,
+    ).std()
+
+    upper_band = rolling_mean + (2 * rolling_std)
+    lower_band = rolling_mean - (2 * rolling_std)
+
+    out["BB_width"] = safe_divide(
+    upper_band - lower_band,
+    rolling_mean,
+)
 
     sharpe_w = _CFG["sharpe_window"]
     periods_per_year = _CFG["periods_per_year"]
