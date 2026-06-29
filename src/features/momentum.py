@@ -22,20 +22,6 @@ def momentum_features(df: pd.DataFrame) -> pd.DataFrame:
         timeperiod=_CFG["adx_window"],
     )
 
-    out["ROC"] = talib.ROC(
-        out["close"],
-        timeperiod=10,
-    )
-
-    macd, signal, hist = talib.MACD(
-        out["close"],
-        fastperiod=12,
-        slowperiod=26,
-        signalperiod=9,
-    )
-
-    out["MACD_hist"] = hist
-
     out["up_streak"] = consecutive_streak(
         out["close"].diff() > 0
     )
