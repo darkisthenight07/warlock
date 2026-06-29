@@ -16,9 +16,13 @@ def price_features(df: pd.DataFrame) -> pd.DataFrame:
 
     out["log_return"] = np.log(out["close"] / out["close"].shift(short_p))
     out[f"log_return_{long_p}h"] = np.log(out["close"] / out["close"].shift(long_p))
+    out["log_return_24h"] = np.log(
+    out["close"] / out["close"].shift(24)
+              ) 
 
     ema = out["close"].ewm(span=ema_w, adjust=False).mean()
     out["EMA_ratio"] = safe_divide(out["close"], ema)
+    out["EMA_slope"] = ema.pct_change()
 
     roll_high = out["high"].rolling(hl_w, min_periods=hl_w).max()
     roll_low = out["low"].rolling(hl_w, min_periods=hl_w).min()
