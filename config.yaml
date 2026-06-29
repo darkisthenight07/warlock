@@ -51,9 +51,12 @@ features:
     vol_ratio_long_window: 72      
     sharpe_window: 24              
     periods_per_year: 8760 
+    bb_window: 20
+    bb_std_multiplier: 2.0
 
   volume:
-    zscore_window: 20             
+    zscore_window: 20 
+    relative_volume_window: 20            
 
 #path configs
 paths:
