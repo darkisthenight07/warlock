@@ -46,6 +46,7 @@ All modules are completely decentralized and governed by `config.yaml`. Adjustin
 Clone this repository and set up your local development environment:
 
 ```bash
+
 # Clone the repository
 git clone https://github.com/darkisthenight07/warlock
 cd warlock
@@ -63,6 +64,7 @@ pip install -r requirements.txt
 ## Running the Data & Feature Pipeline
 To invoke the pipeline orchestration engine (which downloads data, builds clean feature matrices, prints dataset details, and builds diagnostic asset charts in your local graphs directory):
 ```bash
+
 python main.py
 
 ```
@@ -71,6 +73,7 @@ python main.py
 The repository packages separate verification testing scripts to guarantee that your custom gym environment, simulated account portfolios, and mathematical reward components operate within perfect limits. Run them via the following scripts:
 
 ```bash
+
 # Verify reward scaling properties, buffer mechanics, and penalties
 python test_rewards.py
 
