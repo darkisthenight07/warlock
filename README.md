@@ -1,30 +1,58 @@
-# End-to-End RL Based Strategy in Cryptocurrency Markets
+# Crypto RL Trader Pipeline
 
-**Authors:**  
-Jalaj Bhadouria  
-Jay Gupta  
-Mandar Bhalerao
+A highly modular and structured framework designed for building, testing, and verifying Reinforcement Learning (RL) agents for Bitcoin/Crypto trading. The project features a custom Gymnasium-compliant market environment, an advanced portfolio simulator with realistic market friction modeling, and a highly customizable feature engineering suite.
 
-### Installation & Execution Steps
+## Project State & Functionality
 
-Run the following commands sequentially from your repository root (`warlock-main`):
+The repository contains the complete foundational infrastructure required to train an RL trading agent. All internal components—including data pipelines, indicator creation, order execution simulation, and reward mechanics—are complete and validated via standalone test suites. 
 
-**Windows PowerShell:**
-```powershell
-# 1. Create a virtual environment named 'venv'
+### Core Modules
+
+1. **Data Management (`src/data_manager/`)**
+   * **Downloader & Cleaner:** Automates downloading historical OHLCV data from exchanges (e.g., Binance) via `downloader.py`.
+   * **Anomaly Detection:** Tracks market structural anomalies such as extreme wick deviations via rolling windows and wick multipliers.
+
+2. **Feature Engineering Suite (`src/features/`)**
+   * Implements a pipeline creating over 35 distinct features across 5 major categories: Price Action, Candlestick structures, Momentum, Volatility, and Volume indicators.
+   * Includes automated feature profiling, producing visualization graphs (`graphs/features/`) to diagnose correlation profiles, rolling Sharpe ratios, trend strength, and distribution patterns.
+
+3. **Custom Gymnasium Environment (`src/env/`)**
+   * `gym_bitcoin.py` provides a custom Gymnasium interface designed to pass price tensors and historical lookback windows seamlessly to standard RL networks.
+
+4. **Advanced Portfolio Simulator (`src/portfolio/`)**
+   * Emulates live execution constraints including separate maker/taker fee rates, minimum trade national cutoffs, and a fixed basis-points (`fixed_bps`) slippage model.
+   * Manages trade ledger tracking, rebalancing step delta thresholds to prevent dust trades, and strict automated risk rules (e.g., maximum drawdown liquidations).
+
+5. **Asymmetric Reward Engineering (`src/env/rewards.py`)**
+   * Computes objective functions driven by custom reward criteria.
+   * Features dynamic rolling Sharpe ratio buffers combined with configurable scale penalties for drawdowns and high-frequency overtrading.
+
+---
+
+## Configuration
+
+All modules are completely decentralized and governed by `config.yaml`. Adjusting this file allows you to instantly alter exchange parameters, swap active technical indicators, fine-tune trading fees, configure lookback observation windows, or tweak reward structures without touching core code.
+
+---
+
+## Getting Started
+
+### Prerequisites
+* Python 3.8+
+* `TA-Lib` C-library dependencies (required for technical market indicators)
+
+### 1. Installation
+
+Clone this repository and set up your local development environment:
+
+```bash
+# Clone the repository
+git clone <your-repo-url>
+cd crypto-rl-trader
+
+# Create and activate a virtual environment
 python -m venv venv
+source venv/bin/activate  # On Windows use: venv\Scripts\activate
 
-# 2. Activate the virtual environment
-venv\Scripts\activate
-
-# 3. Install required dependencies
+# Install dependencies
 pip install -r requirements.txt
-
-# 4. Download, Clean,Generate and plot features
-python main.py
-
-
-# To test the environment with 20 random steps
-python test_env.py
-
-```
