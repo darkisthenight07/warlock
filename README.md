@@ -1,19 +1,19 @@
-# Crypto RL Trader Pipeline
+# Warlock
 
-A highly modular and structured framework designed for building, testing, and verifying Reinforcement Learning agents for Bitcoin trading. The project features a custom Gymnasium compliant market environment, an advanced portfolio simulator with realistic market friction modeling, and a highly customizable feature engineering suite.
+A highly modular and structured framework designed for building, testing, and verifying Reinforcement Learning agents in Cryptocurrency Markets. The project features a custom Gymnasium compliant market environment, an advanced portfolio simulator with realistic market friction modeling, and a highly customizable feature engineering suite.
 
 ## Project State & Functionality
 
-The repository contains the complete foundational infrastructure required to train an RL trading agent. All internal components, like the data pipelines, indicator creation, order execution simulation, and reward mechanics, are complete and validated by standalone test files. 
+The repository contains the foundational infrastructure required to train an RL trading agent and is actively being worked upon. All internal components, including the data pipelines, indicator creation, order execution simulation, and reward mechanics, are complete and validated by standalone test files. 
 
 ### Core Modules
 
 1. **Data Management (`src/data_manager/`)**
-   * **Downloader & Cleaner:** Automates downloading historical OHLCV data from exchanges (e.g., Binance) via `downloader.py`.
+   * **Downloader & Cleaner:** Automates downloading historical OHLCV data from exchanges (e.g., Binance) and does basic preproccessing such as duplicate removal and handling missing candles.
    * **Anomaly Detection:** Tracks market structural anomalies such as extreme wick deviations via rolling windows and wick multipliers.
 
 2. **Feature Engineering Suite (`src/features/`)**
-   * Implements a pipeline creating over 35 distinct features across 5 major categories: Price Action, Candlestick structures, Momentum, Volatility, and Volume indicators.
+   * Implements a pipeline creating distinct features across 5 major categories: Price Action, Candlestick structures, Momentum, Volatility, and Volume indicators.
    * Includes automated feature profiling, producing visualization graphs (`graphs/features/`) to diagnose correlation profiles, rolling Sharpe ratios, trend strength, and distribution patterns.
 
 3. **Custom Gymnasium Environment (`src/env/`)**
