@@ -48,7 +48,7 @@ Clone this repository and set up your local development environment:
 ```bash
 # Clone the repository
 git clone https://github.com/darkisthenight07/warlock
-cd crypto-rl-trader
+cd warlock
 
 # Create and activate a virtual environment
 python -m venv venv
