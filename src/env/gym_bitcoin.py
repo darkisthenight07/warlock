@@ -217,6 +217,9 @@ class GymBitcoinEnv(gym.Env):
             "capital": total_value,
             "drawdown": drawdown,
             "n_trades_this_step": len(trades),
+            "realized_pnl": self.portfolio.realized_pnl(),
+            "unrealized_pnl": self.portfolio.unrealized_pnl(prices),
+            "reward_components": dict(self.reward_calc.last_components),
         }
 
         return obs, float(reward), terminated, truncated, info
