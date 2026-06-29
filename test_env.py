@@ -12,15 +12,13 @@ from src.utils import config, root
 
 log_dir = root(config["paths"]["logs_dir"])
 log_dir.mkdir(exist_ok=True, parents=True)
-
-logger.remove()
-logger.add(sys.stdout, level="INFO", format="{time:HH:mm:ss} | {level: <7} | {message}")
+logger.add(sys.stdout, level="INFO", format="{time:HH:mm:ss}|{level: <7}|{message}")
 logger.add(
     str(log_dir / "env_test_{time}.log"),
     rotation="1 day",
     retention="7 days",
     level="DEBUG",
-    format="{time:YYYY-MM-DD HH:mm:ss} | {level} | {message}",
+    format="{time:YYYY-MM-DD HH:mm:ss}|{level}|{message}",
 )
 
 def test_env_creation_and_spaces():
@@ -148,7 +146,6 @@ def run_all() -> bool:
             line += f"  ({err})"
         logger.info(line)
 
-    logger.info("-" * 70)
     if n_passed == n_total:
         logger.success(f"ALL TESTS PASSED ({n_passed}/{n_total})")
     else:

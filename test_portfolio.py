@@ -14,15 +14,13 @@ from src.utils import config, root
 
 log_dir = root(config["paths"]["logs_dir"])
 log_dir.mkdir(exist_ok=True, parents=True)
-
-logger.remove()  # avoid duplicate console handlers if this module is re-run/imported
-logger.add(sys.stdout, level="INFO", format="{time:HH:mm:ss} | {level: <7} | {message}")
+logger.add(sys.stdout, level="INFO", format="{time:HH:mm:ss}|{level: <7}|{message}")
 logger.add(
     str(log_dir / "portfolio_test_{time}.log"),
     rotation="1 day",
     retention="7 days",
     level="DEBUG",
-    format="{time:YYYY-MM-DD HH:mm:ss} | {level} | {message}",
+    format="{time:YYYY-MM-DD HH:mm:ss}|{level}|{message}",
 )
 
 def approx(a: float, b: float, tol: float = 1e-6) -> bool:
