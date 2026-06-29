@@ -1,10 +1,10 @@
 # Crypto RL Trader Pipeline
 
-A highly modular and structured framework designed for building, testing, and verifying Reinforcement Learning (RL) agents for Bitcoin/Crypto trading. The project features a custom Gymnasium-compliant market environment, an advanced portfolio simulator with realistic market friction modeling, and a highly customizable feature engineering suite.
+A highly modular and structured framework designed for building, testing, and verifying Reinforcement Learning agents for Bitcoin trading. The project features a custom Gymnasium compliant market environment, an advanced portfolio simulator with realistic market friction modeling, and a highly customizable feature engineering suite.
 
 ## Project State & Functionality
 
-The repository contains the complete foundational infrastructure required to train an RL trading agent. All internal components—including data pipelines, indicator creation, order execution simulation, and reward mechanics—are complete and validated via standalone test suites. 
+The repository contains the complete foundational infrastructure required to train an RL trading agent. All internal components, like the data pipelines, indicator creation, order execution simulation, and reward mechanics, are complete and validated by standalone test files. 
 
 ### Core Modules
 
