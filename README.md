@@ -47,7 +47,7 @@ Clone this repository and set up your local development environment:
 
 ```bash
 # Clone the repository
-git clone <your-repo-url>
+git clone https://github.com/darkisthenight07/warlock
 cd crypto-rl-trader
 
 # Create and activate a virtual environment
@@ -56,3 +56,44 @@ source venv/bin/activate  # On Windows use: venv\Scripts\activate
 
 # Install dependencies
 pip install -r requirements.txt
+
+```
+
+
+## Running the Data & Feature Pipeline
+To invoke the pipeline orchestration engine (which downloads data, builds clean feature matrices, prints dataset details, and builds diagnostic asset charts in your local graphs directory):
+```bash
+python main.py
+
+```
+
+## Component Verification Tests
+The repository packages separate verification testing scripts to guarantee that your custom gym environment, simulated account portfolios, and mathematical reward components operate within perfect limits. Run them via the following scripts:
+
+```bash
+# Verify reward scaling properties, buffer mechanics, and penalties
+python test_rewards.py
+
+# Verify trade execution flows, fee charges, slippage models, and liquidations
+python test_portfolio.py
+
+# Verify Gymnasium state handling, lookback observations, step updates, and resets
+python test_env.py
+
+```
+## Project Directory Structure
+The structure of the repository is organized as follows:
+├── config.yaml             # Core configuration module for data, models, portfolio, and rewards
+├── main.py                 # Core framework entrypoint orchestrating pipeline steps
+├── requirements.txt        # Python external dependency package index
+├── graphs/                 # Auto-generated diagnostics
+│   └── features/           # Feature density, correlation heatmap, and distribution plots
+├── notebooks/              # Local research and notebook scripts
+│   └── feature_exploration.ipynb
+├── src/
+│   ├── data_manager/       # Historical data fetching, cleaning, and candle filling algorithms
+│   ├── env/                # Gymnasium training wrappers, reward functions, and step rules
+│   ├── features/           # Specialized quantitative indicator builders (momentum, candle, volume, etc.)
+│   ├── portfolio/          # State-machine simulating fees, slippage, trade ledger logs, and sizing
+│   └── utils/              # System utility packages, configuration lookups, and root resolving
+└── test_*.py               # Automated orchestration verification suites
