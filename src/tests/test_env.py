@@ -1,7 +1,3 @@
-"""
-Quick test script to verify GymBitcoinEnv works correctly.
-Run: python test_env.py
-"""
 from __future__ import annotations
 import sys
 import traceback
