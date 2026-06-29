@@ -6,8 +6,8 @@ data:
     # - "ETH/USDT" # add more symbols as needed
   timeframe: "1h"
   total_years: 5
-  start_date: "2019-01-01"
-  end_date: "2024-01-01"
+  start_date: "2020-07-01"
+  end_date: "2025-07-01"
   max_fill_candles: 2
   #anomaly detection configs
   anomaly_detection:
