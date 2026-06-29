@@ -124,8 +124,7 @@ def _plot_wick_anomaly(df, graph_path):
     plt.close()
 
 # columns plotted as distribution histograms rather than time series
-_HIST_FEATURES = {"log_return", "log_return_6h", "close_location", "body_pct"}
-
+_HIST_FEATURES = {"log_return", "log_return_6h", "close_location","log_return_24h", "body_pct","upper_wick_pct","lower_wick_pct",}
 # columns plotted as a simple 90-day line, optionally with a reference hline
 _LINE_90D_FEATURES = {
     "distance_from_high_24h": [0.0],
@@ -134,6 +133,11 @@ _LINE_90D_FEATURES = {
     "volatility_ratio": [1.0],
     "rolling_sharpe": [0.0],
     "volume_zscore": [0.0],
+    "EMA_slope": [0.0],
+    "ROC": [0.0],
+    "MACD_hist": [0.0],
+    "BB_width": [],
+    "relative_volume": [1.0],
 }
 
 # columns with a fully custom handler
