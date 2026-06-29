@@ -1,14 +1,13 @@
 from collections import deque
 
 import numpy as np
+from src.utils import config
 
-
-SHARPE_WINDOW = 100
-DRAWDOWN_PENALTY_SCALE = 0.1
-OVERTRADE_PENALTY_SCALE = 0.001
-MIN_BUFFER_SIZE = 2
-EPSILON = 0.01
-
+SHARPE_WINDOW = config['reward']['sharpe_window']
+DRAWDOWN_PENALTY_SCALE = config['reward']['drawdown_penalty_scale']
+OVERTRADE_PENALTY_SCALE = config['reward']['overtrade_penalty_scale']
+MIN_BUFFER_SIZE = config['reward']['min_buffer_size']
+EPSILON = config['reward']['epsilon']
 
 class RewardCalculator:
     def __init__(
@@ -21,9 +20,21 @@ class RewardCalculator:
         self.drawdown_scale = drawdown_scale
         self.overtrade_scale = overtrade_scale
         self.returns_buffer: deque = deque(maxlen=window)
+        self.last_components: dict = {
+            "sharpe_reward": 0.0,
+            "drawdown_penalty": 0.0,
+            "overtrade_penalty": 0.0,
+            "total_reward": 0.0,
+        }
 
     def reset(self) -> None:
         self.returns_buffer.clear()
+        self.last_components = {
+            "sharpe_reward": 0.0,
+            "drawdown_penalty": 0.0,
+            "overtrade_penalty": 0.0,
+            "total_reward": 0.0,
+        }
 
     def _sharpe_reward(self, step_return: float) -> float:
         self.returns_buffer.append(step_return)
@@ -50,7 +61,15 @@ class RewardCalculator:
         sharpe  = self._sharpe_reward(step_return)
         dd_pen  = self._drawdown_penalty(drawdown)
         ot_pen  = self._overtrade_penalty(position_change)
-        return sharpe - dd_pen - ot_pen
+        total = sharpe - dd_pen - ot_pen
+
+        self.last_components = {
+            "sharpe_reward": sharpe,
+            "drawdown_penalty": dd_pen,
+            "overtrade_penalty": ot_pen,
+            "total_reward": total,
+        }
+        return total
 
     @property
     def buffer_mean(self) -> float:

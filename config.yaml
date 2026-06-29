@@ -87,3 +87,11 @@ portfolio:
     min_rebalance_delta: 0.001  # ignore weight changes smaller than this (avoid dust trades)
   risk:
     max_drawdown: 0.3
+
+#reward configs
+reward:
+  sharpe_window: 100
+  drawdown_penalty_scale: 0.1
+  overtrade_penalty_scale: 0.001
+  min_buffer_size: 2
+  epsilon: 0.01
