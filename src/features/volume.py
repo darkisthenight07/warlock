@@ -10,6 +10,12 @@ def volume_features(df: pd.DataFrame) -> pd.DataFrame:
     out = df.copy()
 
     out["volume_zscore"] = rolling_zscore(out["volume"], window=_CFG["zscore_window"])
+    volume_ma = out["volume"].rolling(
+    window=_CFG["relative_volume_window"],
+    min_periods=_CFG["relative_volume_window"],
+     ).mean()
+
+    out["relative_volume"] = out["volume"] / volume_ma
 
     direction = np.where(
         out["close"] > out["close"].shift(), 1,
