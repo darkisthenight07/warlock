@@ -81,19 +81,3 @@ python test_portfolio.py
 python test_env.py
 
 ```
-## Project Directory Structure
-The structure of the repository is organized as follows:
-├── config.yaml             # Core configuration module for data, models, portfolio, and rewards
-├── main.py                 # Core framework entrypoint orchestrating pipeline steps
-├── requirements.txt        # Python external dependency package index
-├── graphs/                 # Auto-generated diagnostics
-│   └── features/           # Feature density, correlation heatmap, and distribution plots
-├── notebooks/              # Local research and notebook scripts
-│   └── feature_exploration.ipynb
-├── src/
-│   ├── data_manager/       # Historical data fetching, cleaning, and candle filling algorithms
-│   ├── env/                # Gymnasium training wrappers, reward functions, and step rules
-│   ├── features/           # Specialized quantitative indicator builders (momentum, candle, volume, etc.)
-│   ├── portfolio/          # State-machine simulating fees, slippage, trade ledger logs, and sizing
-│   └── utils/              # System utility packages, configuration lookups, and root resolving
-└── test_*.py               # Automated orchestration verification suites
