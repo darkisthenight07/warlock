@@ -44,7 +44,7 @@ class RewardCalculator:
 
         mean_r = np.mean(self.returns_buffer)
         std_r = np.std(self.returns_buffer) + EPSILON
-        return float(mean_r / std_r)
+        return float(np.clip(mean_r / std_r, -5.0, 5.0))
 
     def _drawdown_penalty(self, drawdown: float) -> float:
         return self.drawdown_scale * max(drawdown, 0.0)
@@ -61,8 +61,9 @@ class RewardCalculator:
         sharpe  = self._sharpe_reward(step_return)
         dd_pen  = self._drawdown_penalty(drawdown)
         ot_pen  = self._overtrade_penalty(position_change)
-        total = sharpe - dd_pen - ot_pen
-
+        step_return_weight = 0.25
+        sharpe_weight = 0.75
+        total =((step_return_weight * step_return) + (sharpe_weight * sharpe) - dd_pen - ot_pen)
         self.last_components = {
             "sharpe_reward": sharpe,
             "drawdown_penalty": dd_pen,
