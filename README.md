@@ -85,12 +85,12 @@ The repository packages separate verification testing scripts to guarantee that 
 ```bash
 
 # Verify reward scaling properties, buffer mechanics, and penalties
-python tests/test_rewards.py
+python -m src.tests.test_rewards
 
 # Verify trade execution flows, fee charges, slippage models, and liquidations
-python tests/test_portfolio.py
+python -m src.tests.test_portfolio
 
 # Verify Gymnasium state handling, lookback observations, step updates, and resets
-python tests/test_env.py
+python -m src.tests.test_env
 
 ```

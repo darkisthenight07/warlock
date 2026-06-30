@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-from httpx import get
 import numpy as np
 import pandas as pd
 import gymnasium as gym
