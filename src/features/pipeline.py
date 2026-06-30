@@ -22,15 +22,14 @@ def load_cleaned(symbol: str, timeframe: str,
 
 def split_temporal(df: pd.DataFrame,
                     train_years: int = 4,
+                    train_months: int = 5,
                     test_months: int = 6) -> tuple[pd.DataFrame, pd.DataFrame]:
     df = df.sort_values("timestamp").reset_index(drop=True)
 
     start = df["timestamp"].min()
     end   = df["timestamp"].max()
 
-    years_part = int(train_years)
-    days_part  = int(round((train_years - years_part) * 365.25))
-    train_cutoff = start + pd.DateOffset(years=years_part, days=days_part)
+    train_cutoff = start + pd.DateOffset(years=train_years, months=train_months)
     test_start   = end - pd.DateOffset(months=test_months)
 
     if test_start <= train_cutoff:
@@ -95,7 +94,7 @@ def generate_and_plot_features(symbol: str = "BTC/USDT",
     df = volume_features(df)      # volume_zscore, OBV
     plot_features(df)
 
-    train_df, test_df = split_temporal(df, train_years=4, test_months=6)
+    train_df, test_df = split_temporal(df, train_years=4, train_months=5, test_months=6)
 
     train_df, test_df = apply_train_stats(train_df, test_df)
 
