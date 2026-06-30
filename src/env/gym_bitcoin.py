@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from httpx import get
 import numpy as np
 import pandas as pd
 import gymnasium as gym
@@ -72,6 +73,13 @@ class GymBitcoinEnv(gym.Env):
         self.holding_time = 0
         self.peak_value = 0.0
         self.reward_calc = RewardCalculator()
+        #  Trade State
+        self.position_open = False
+        self.entry_price = 0.0
+        self.entry_atr = 0.0
+        self.stop_loss_multiple=config.get("risk", {}).get("stop_loss_atr_multiple", 1.5)
+        self.take_profit_multiple= config.get("risk", {}).get("take_profit_atr_multiple", 3.0)
+        self.target_atr_pct=config.get("risk", {}).get("target_atr_pct", 1.0)
 
         logger.info(
             f"GymBitcoinEnv initialized: "
@@ -91,6 +99,9 @@ class GymBitcoinEnv(gym.Env):
         self.prices = df["close"].values.astype(np.float32)
         self.timestamps = df["timestamp"].values
         self.n_features = len(self.feature_cols)
+        if "ATR_pct" not in self.feature_cols:
+            raise ValueError("ATR_pct feature is required for risk management.")
+        self.atr_feature_idx = self.feature_cols.index("ATR_pct")
 
         #Max steps = data length - window_len - 1 (need at least one step ahead)
         self.max_steps = len(self.features) - self.window_len - 1
@@ -136,6 +147,9 @@ class GymBitcoinEnv(gym.Env):
         self.holding_time = 0
         self.peak_value = self.portfolio.cash
         self.reward_calc.reset()
+        self.position_open = False
+        self.entry_price = 0.0
+        self.entry_atr = 0.0
 
         obs = self.get_obs()
         price = float(self.prices[self.current_step])
@@ -156,6 +170,10 @@ class GymBitcoinEnv(gym.Env):
             self.position_sizer.apply(current, target)
             for current, target in zip(self.current_weights, target_weights)
         ]
+        # Dynamic ATR Position Sizing
+        current_atr = float(self.features[self.current_step, self.atr_feature_idx])
+        risk_multiplier = min(1.0, self.target_atr_pct / max(current_atr, 1e-6) )
+        new_weights=[weight*risk_multiplier for weight in new_weights]
 
         # Capture portfolio value at the *old* price, before this step's
         # trade and before advancing the market cursor. This is the
@@ -167,6 +185,29 @@ class GymBitcoinEnv(gym.Env):
         self.current_step += 1
         price = float(self.prices[self.current_step])
         prices = [price]
+        # ATR Stop Loss
+        
+        forced_exit = False
+        exit_reason = None
+        if self.position_open:
+              unrealized_return = (price - self.entry_price) / self.entry_price
+              stop_loss_pct=(self.stop_loss_multiple * self.entry_atr/100.0)
+              take_profit_pct=(self.take_profit_multiple*self.entry_atr/100.0)
+              if unrealized_return <= -stop_loss_pct:
+                  logger.info( f"ATR Stop Loss Triggered "
+                               f"| Entry={self.entry_price:.2f} "
+                                f"| Current={price:.2f}")
+                  new_weights = [0.0] * self.n_assets  # Force exit
+                  forced_exit = True
+                  exit_reason = "stop_loss"
+              elif unrealized_return >= take_profit_pct:
+                  
+                    logger.info( f"ATR Take Profit Triggered "
+                               f"| Entry={self.entry_price:.2f} "
+                                f"| Current={price:.2f}")
+                    new_weights = [0.0] * self.n_assets  # Force exit
+                    forced_exit = True
+                    exit_reason = "take_profit"
 
         # 3. Execute the rebalance at the new candle's close.
         weight_delta_before = sum(abs(a - b) for a, b in zip(new_weights, self.current_weights))
@@ -177,6 +218,17 @@ class GymBitcoinEnv(gym.Env):
             timestamp=self.timestamps[self.current_step],
         )
         self.current_weights = self.portfolio.current_weights(prices)
+
+        #Detects a new position opening
+        if(not self.position_open and any(weight>1e-6 for weight in self.current_weights)):
+            self.position_open = True
+            self.entry_price = price
+            self.entry_atr = float(self.features[self.current_step, self.atr_feature_idx])
+        # Detect position fully closed
+        if (self.position_open and all(weight < 1e-6 for weight in self.current_weights)):
+            self.position_open = False
+            self.entry_price = 0.0
+            self.entry_atr = 0.0
 
         total_value = self.portfolio.total_value(prices)
         cost = sum(t.fee + t.slippage_cost for t in trades)
@@ -220,6 +272,8 @@ class GymBitcoinEnv(gym.Env):
             "realized_pnl": self.portfolio.realized_pnl(),
             "unrealized_pnl": self.portfolio.unrealized_pnl(prices),
             "reward_components": dict(self.reward_calc.last_components),
+            "forced_exit": forced_exit,
+            "exit_reason": exit_reason,
         }
 
         return obs, float(reward), terminated, truncated, info
