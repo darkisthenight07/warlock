@@ -70,6 +70,11 @@ env:
   transaction_cost_rate: 0.0005
   max_drawdown: 0.3
   initial_capital: 10000.0
+  
+risk:
+  stop_loss_atr_multiple: 1.5
+  take_profit_atr_multiple: 3.0
+  target_atr_pct: 1.0
 
 #portfolio configs
 portfolio:
