@@ -1,6 +1,16 @@
 # Warlock
 
-A highly modular and structured framework designed for building, testing, and verifying Reinforcement Learning agents in Cryptocurrency Markets. The project features a custom Gymnasium compliant market environment, an advanced portfolio simulator with realistic market friction modeling, and a highly customizable feature engineering suite.
+Warlock is a modular Reinforcement Learning framework for developing and evaluating cryptocurrency trading agents. The project provides an end-to-end pipeline covering historical market data collection, feature engineering, portfolio simulation, risk management, and a custom Gymnasium environment for training RL algorithms. The focus is on building a realistic trading environment that can be easily extended and experimented with.
+
+## Key Features
+
+- Modular data collection and preprocessing pipeline
+- Automated feature engineering with visualization support
+- Custom Gymnasium environment for reinforcement learning
+- Realistic spot portfolio simulator with fees and slippage
+- ATR-based Stop Loss, Take Profit, and dynamic position sizing
+- Rolling Sharpe ratio based reward function with drawdown and overtrading penalties
+- Config-driven architecture for rapid experimentation
 
 ## Project State & Functionality
 
@@ -20,12 +30,12 @@ The repository contains the foundational infrastructure required to train an RL 
    * `gym_bitcoin.py` provides a custom Gymnasium interface designed to pass price tensors and historical lookback windows seamlessly to standard RL networks.
 
 4. **Advanced Portfolio Simulator (`src/portfolio/`)**
-   * Emulates live execution constraints including separate maker/taker fee rates, minimum trade national cutoffs, and a fixed basis-points (`fixed_bps`) slippage model.
-   * Manages trade ledger tracking, rebalancing step delta thresholds to prevent dust trades, and strict automated risk rules (e.g., maximum drawdown liquidations).
+   * Emulates realistic spot trading with configurable maker/taker fees, slippage models, minimum trade notional limits,and portfolio rebalancing.
+   *  The simulator also includes ATR-based Stop Loss, Take Profit, dynamic position sizing,and portfolio-level drawdown protection while maintaining detailed trade and equity history throughout each episode.
 
-5. **Asymmetric Reward Engineering (`src/env/rewards.py`)**
-   * Computes objective functions driven by custom reward criteria.
-   * Features dynamic rolling Sharpe ratio buffers combined with configurable scale penalties for drawdowns and high-frequency overtrading.
+6. **Asymmetric Reward Engineering (`src/env/rewards.py`)**
+   * Implements a risk-aware reward function combining immediate portfolio returns with a rolling Sharpe ratio objective.
+   * Additional penalties for portfolio drawdown and excessive trading encourage stable, risk-adjusted behaviour instead of maximizing raw profits alone.
 
 ---
 
